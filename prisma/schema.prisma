@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Condominio {
+  id              String          @id @default(cuid())
+  cnpj            String          @unique
+  nome            String
+  endereco        String
+  email           String
+  celular         String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  unidades        Unidade[]
+  despesasMensais DespesaMensal[]
+}
+
+model Unidade {
+  id           String     @id @default(cuid())
+  numero       String
+  nomeMorador  String     @default("")
+  celular      String     @default("")
+  tipoUnidade  String     @default("Apartamento")
+  tipoConsumo  String     @default("Água/Gás")
+  bloco        String     @default("")
+  condominioId String
+  condominio   Condominio @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  leituras     Leitura[]
+  faturas      FaturaUnidade[]
+
+  @@unique([condominioId, bloco, numero])
+}
+
+model Leitura {
+  id        String   @id @default(cuid())
+  unidadeId String
+  unidade   Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Restrict)
+  mes       Int
+  ano       Int
+  valorAgua Float?
+  valorGas  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([unidadeId, mes, ano])
+}
+
+model TipoDespesa {
+  id        String          @id @default(cuid())
+  nome      String          @unique
+  despesas  DespesaMensal[]
+}
+
+model DespesaMensal {
+  id            String      @id @default(cuid())
+  bloco         String      @default("")
+  mes           Int
+  ano           Int
+  valorTotal    Float
+  formaCobranca String
+  condominioId  String
+  condominio    Condominio  @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  tipoDespesaId String
+  tipoDespesa   TipoDespesa @relation(fields: [tipoDespesaId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([condominioId, bloco, mes, ano, tipoDespesaId])
+}
+
+model FaturaUnidade {
+  id           String   @id @default(cuid())
+  unidadeId    String
+  unidade      Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Restrict)
+  mes          Int
+  ano          Int
+  valorAgua    Float    @default(0)
+  valorEnergia Float    @default(0)
+  valorGas     Float    @default(0)
+  valorOutras  Float    @default(0)
+  valorTotal   Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([unidadeId, mes, ano])
+}
