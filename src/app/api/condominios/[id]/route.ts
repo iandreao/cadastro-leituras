@@ -120,7 +120,11 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   await prisma.$transaction([
+    prisma.despesaMensal.deleteMany({ where: { condominioId: id } }),
     prisma.unidade.deleteMany({ where: { condominioId: id } }),
+    prisma.tipoUnidade.deleteMany({ where: { condominioId: id } }),
+    prisma.tipoDespesa.deleteMany({ where: { condominioId: id } }),
+    prisma.bloco.deleteMany({ where: { condominioId: id } }),
     prisma.condominio.delete({ where: { id } }),
   ]);
 

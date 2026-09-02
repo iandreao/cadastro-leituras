@@ -18,6 +18,26 @@ export const includeDespesa = {
 
 type Falha = { ok: false; error: string; status: number };
 
+export async function listarDespesasMensais(filtros: {
+  condominioId?: string | null;
+  blocoId?: string | null;
+}) {
+  const condominioId = filtros.condominioId?.trim() || undefined;
+  const blocoId =
+    filtros.blocoId === null || filtros.blocoId === undefined
+      ? undefined
+      : filtros.blocoId;
+
+  return prisma.despesaMensal.findMany({
+    where: {
+      ...(condominioId ? { condominioId } : {}),
+      ...(blocoId !== undefined ? { blocoId } : {}),
+    },
+    orderBy: [{ ano: "desc" }, { mes: "desc" }, { createdAt: "desc" }],
+    include: includeDespesa,
+  });
+}
+
 export async function persistirDespesaMensal(body: unknown, id?: string) {
   const parsed = despesaMensalSchema.safeParse(body);
 

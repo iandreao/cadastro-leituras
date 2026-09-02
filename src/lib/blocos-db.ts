@@ -6,6 +6,35 @@ type BlocoNome = {
   nome: string;
 };
 
+export const includeBlocoCadastro = {
+  _count: {
+    select: {
+      unidades: true,
+      tiposUnidade: true,
+      tiposDespesa: true,
+      despesasMensais: true,
+    },
+  },
+} as const;
+
+export async function listarBlocosPorCondominio(condominioId: string) {
+  return prisma.bloco.findMany({
+    where: { condominioId },
+    orderBy: { nome: "asc" },
+    include: includeBlocoCadastro,
+  });
+}
+
+export async function criarBloco(condominioId: string, nome: string) {
+  return prisma.bloco.create({
+    data: {
+      nome,
+      condominioId,
+    },
+    include: includeBlocoCadastro,
+  });
+}
+
 export async function garantirBlocoPadrao(condominioId: string) {
   return prisma.bloco.upsert({
     where: {

@@ -3,7 +3,9 @@ import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import {
+  criarTipoDespesa,
   includeTipoDespesaConfig,
+  listarTiposDespesaPorBloco,
   substituirRegrasParticipacao,
 } from "@/lib/regras-participacao";
 import { tipoDespesaConfigSchema } from "@/lib/validations";
@@ -49,11 +51,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const tipos = await prisma.tipoDespesa.findMany({
-    where: { condominioId, blocoId },
-    orderBy: { nome: "asc" },
-    include: includeTipoDespesaConfig,
-  });
+  const tipos = await listarTiposDespesaPorBloco(condominioId, blocoId);
 
   return NextResponse.json(tipos);
 }
@@ -108,7 +106,7 @@ export async function POST(request: Request) {
       where: {
         nome: data.nome,
         condominioId: data.condominioId,
-        blocoId: data.blocoId,
+        blocoId: resolvido.blocoId,
       },
     });
 
@@ -119,19 +117,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const tipo = await prisma.tipoDespesa.create({
-      data: {
-        nome: data.nome,
-        condominioId: data.condominioId,
-        blocoId: data.blocoId,
-      },
+    const tipo = await criarTipoDespesa({
+      nome: data.nome,
+      condominioId: data.condominioId,
+      blocoId: resolvido.blocoId,
     });
 
     const regras = await substituirRegrasParticipacao(
       tipo.id,
       parsed.data.tipoUnidadeIds,
       data.condominioId,
-      data.blocoId,
+      resolvido.blocoId,
     );
 
     if (regras.error) {

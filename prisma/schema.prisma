@@ -43,6 +43,7 @@ model Bloco {
   despesasMensais DespesaMensal[]
 
   @@unique([nome, condominioId])
+  @@index([condominioId])
 }
 
 model TipoUnidade {
@@ -56,6 +57,8 @@ model TipoUnidade {
   regras       RegraParticipacao[]
 
   @@unique([nome, condominioId, blocoId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model Unidade {
@@ -76,6 +79,8 @@ model Unidade {
   faturas       FaturaUnidade[]
 
   @@unique([condominioId, blocoId, numero])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model Leitura {
@@ -103,6 +108,8 @@ model TipoDespesa {
   regras       RegraParticipacao[]
 
   @@unique([nome, condominioId, blocoId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model DespesaMensal {
@@ -123,6 +130,8 @@ model DespesaMensal {
   updatedAt     DateTime    @updatedAt
 
   @@unique([condominioId, blocoId, mes, ano, tipoDespesaId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model FaturaUnidade {

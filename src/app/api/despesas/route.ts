@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { includeDespesa, persistirDespesaMensal } from "@/lib/despesas-mensal";
-import { prisma } from "@/lib/prisma";
+import {
+  listarDespesasMensais,
+  persistirDespesaMensal,
+} from "@/lib/despesas-mensal";
 import { requireApiSession } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -16,14 +18,7 @@ export async function GET(request: Request) {
     ? searchParams.get("blocoId")
     : null;
 
-  const despesas = await prisma.despesaMensal.findMany({
-    where: {
-      ...(condominioId ? { condominioId } : {}),
-      ...(blocoId !== null ? { blocoId } : {}),
-    },
-    orderBy: [{ ano: "desc" }, { mes: "desc" }, { createdAt: "desc" }],
-    include: includeDespesa,
-  });
+  const despesas = await listarDespesasMensais({ condominioId, blocoId });
 
   return NextResponse.json(despesas);
 }

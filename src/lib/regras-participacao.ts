@@ -1,5 +1,44 @@
 import { prisma } from "@/lib/prisma";
 
+export const includeTipoDespesaConfig = {
+  regras: {
+    include: {
+      tipoUnidade: {
+        select: { id: true, nome: true },
+      },
+    },
+    orderBy: { tipoUnidade: { nome: "asc" as const } },
+  },
+  _count: {
+    select: { despesas: true },
+  },
+} as const;
+
+export async function listarTiposDespesaPorBloco(
+  condominioId: string,
+  blocoId: string,
+) {
+  return prisma.tipoDespesa.findMany({
+    where: { condominioId, blocoId },
+    orderBy: { nome: "asc" },
+    include: includeTipoDespesaConfig,
+  });
+}
+
+export async function criarTipoDespesa(dados: {
+  nome: string;
+  condominioId: string;
+  blocoId: string;
+}) {
+  return prisma.tipoDespesa.create({
+    data: {
+      nome: dados.nome,
+      condominioId: dados.condominioId,
+      blocoId: dados.blocoId,
+    },
+  });
+}
+
 export async function substituirRegrasParticipacao(
   tipoDespesaId: string,
   tipoUnidadeIds: string[],
@@ -36,17 +75,3 @@ export async function substituirRegrasParticipacao(
 
   return { error: null };
 }
-
-export const includeTipoDespesaConfig = {
-  regras: {
-    include: {
-      tipoUnidade: {
-        select: { id: true, nome: true },
-      },
-    },
-    orderBy: { tipoUnidade: { nome: "asc" as const } },
-  },
-  _count: {
-    select: { despesas: true },
-  },
-} as const;

@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       where: {
         nome: data.nome,
         condominioId: data.condominioId,
-        blocoId: data.blocoId,
+        blocoId: resolvido.blocoId,
       },
     });
 
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       data: {
         nome: data.nome,
         condominioId: data.condominioId,
-        blocoId: data.blocoId,
+        blocoId: resolvido.blocoId,
       },
       include: includeTipo,
     });

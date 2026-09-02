@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { nomeBlocoDuplicado } from "@/lib/blocos-db";
+import {
+  criarBloco,
+  listarBlocosPorCondominio,
+  nomeBlocoDuplicado,
+} from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { blocoCadastroSchema } from "@/lib/validations";
@@ -20,20 +24,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const blocos = await prisma.bloco.findMany({
-    where: { condominioId },
-    orderBy: { nome: "asc" },
-    include: {
-      _count: {
-        select: {
-          unidades: true,
-          tiposUnidade: true,
-          tiposDespesa: true,
-          despesasMensais: true,
-        },
-      },
-    },
-  });
+  const blocos = await listarBlocosPorCondominio(condominioId);
 
   return NextResponse.json(blocos);
 }
@@ -77,19 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const bloco = await prisma.bloco.create({
-      data: { nome, condominioId },
-      include: {
-        _count: {
-          select: {
-            unidades: true,
-            tiposUnidade: true,
-            tiposDespesa: true,
-            despesasMensais: true,
-          },
-        },
-      },
-    });
+    const bloco = await criarBloco(condominioId, nome);
 
     return NextResponse.json(bloco, { status: 201 });
   } catch {
