@@ -45,8 +45,19 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
     parsed.data;
 
   const [condominio, tipoDespesa, resolvido] = await Promise.all([
-    prisma.condominio.findUnique({ where: { id: condominioId } }),
-    prisma.tipoDespesa.findUnique({ where: { id: tipoDespesaId } }),
+    prisma.condominio.findUnique({
+      where: { id: condominioId },
+      select: { id: true },
+    }),
+    prisma.tipoDespesa.findUnique({
+      where: { id: tipoDespesaId },
+      select: {
+        id: true,
+        nome: true,
+        condominioId: true,
+        blocoId: true,
+      },
+    }),
     resolverBlocoDoCondominio(condominioId, blocoId),
   ]);
 
@@ -122,15 +133,15 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
   }
 
   const dados = {
-    condominioId,
-    tipoDespesaId,
-    blocoId: resolvido.blocoId,
     mes,
     ano,
     valorTotal,
     valorFixo,
     valorVariavel,
     formaCobranca,
+    condominio: { connect: { id: condominioId } },
+    tipoDespesa: { connect: { id: tipoDespesaId } },
+    bloco: { connect: { id: resolvido.blocoId } },
   };
 
   try {

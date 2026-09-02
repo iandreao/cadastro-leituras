@@ -10,7 +10,11 @@ export async function substituirRegrasParticipacao(
 
   if (idsUnicos.length > 0) {
     const tipos = await prisma.tipoUnidade.findMany({
-      where: { id: { in: idsUnicos }, condominioId, blocoId },
+      where: {
+        id: { in: idsUnicos },
+        condominioId,
+        blocoId,
+      },
       select: { id: true },
     });
 
@@ -19,19 +23,18 @@ export async function substituirRegrasParticipacao(
     }
   }
 
-  await prisma.$transaction([
-    prisma.regraParticipacao.deleteMany({ where: { tipoDespesaId } }),
-    ...(idsUnicos.length > 0
-      ? [
-          prisma.regraParticipacao.createMany({
-            data: idsUnicos.map((tipoUnidadeId) => ({
-              tipoUnidadeId,
-              tipoDespesaId,
-            })),
-          }),
-        ]
-      : []),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.regraParticipacao.deleteMany({ where: { tipoDespesaId } });
+
+    if (idsUnicos.length > 0) {
+      await tx.regraParticipacao.createMany({
+        data: idsUnicos.map((tipoUnidadeId) => ({
+          tipoUnidadeId,
+          tipoDespesaId,
+        })),
+      });
+    }
+  });
 
   return { error: null };
 }

@@ -57,7 +57,11 @@ export async function garantirTiposDespesa(condominioId: string) {
           },
         },
         update: {},
-        create: { nome, condominioId, blocoId: bloco.id },
+        create: {
+          nome,
+          condominio: { connect: { id: condominioId } },
+          bloco: { connect: { id: bloco.id } },
+        },
       }),
     ),
   );

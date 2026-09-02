@@ -1,5 +1,8 @@
+import type { Bloco } from "@prisma/client";
 import { NOME_BLOCO_PADRAO, persistirBloco } from "@/lib/blocos";
 import { prisma } from "@/lib/prisma";
+
+type BlocoNome = Pick<Bloco, "id" | "nome">;
 
 export async function garantirBlocoPadrao(condominioId: string) {
   return prisma.bloco.upsert({
@@ -39,15 +42,19 @@ export async function nomeBlocoDuplicado(
   ignorarId?: string,
 ) {
   const chave = persistirBloco(nome);
-  const blocos = await prisma.bloco.findMany({
+  const blocos: BlocoNome[] = await prisma.bloco.findMany({
     where: { condominioId },
     select: { id: true, nome: true },
   });
 
-  return blocos.some(
-    (item) =>
-      item.id !== ignorarId &&
-      (item.nome.trim().toLowerCase() === nome.trim().toLowerCase() ||
-        persistirBloco(item.nome) === chave),
-  );
+  return blocos.some((item: BlocoNome) => {
+    if (item.id === ignorarId) {
+      return false;
+    }
+
+    return (
+      item.nome.trim().toLowerCase() === nome.trim().toLowerCase() ||
+      persistirBloco(item.nome) === chave
+    );
+  });
 }
