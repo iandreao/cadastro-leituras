@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import UnidadeScreen from "@/components/UnidadeScreen";
 
+export const dynamic = "force-dynamic";
+
 export default async function UnidadesPage() {
   const [condominios, unidades] = await Promise.all([
     prisma.condominio.findMany({
@@ -13,6 +15,12 @@ export default async function UnidadesPage() {
         condominio: {
           select: { id: true, nome: true },
         },
+        tipoUnidade: {
+          select: { id: true, nome: true },
+        },
+        bloco: {
+          select: { id: true, nome: true },
+        },
         _count: {
           select: { leituras: true },
         },
@@ -21,6 +29,10 @@ export default async function UnidadesPage() {
   ]);
 
   return (
-    <UnidadeScreen condominiosIniciais={condominios} unidadesIniciais={unidades} />
+    <UnidadeScreen
+      condominiosIniciais={condominios}
+      unidadesIniciais={unidades}
+      tiposIniciais={[]}
+    />
   );
 }

@@ -1,4 +1,4 @@
-export const TIPOS_UNIDADE = [
+export const TIPOS_UNIDADE_PADRAO = [
   "Apartamento",
   "Sala",
   "Loja",
@@ -13,8 +13,32 @@ export const TIPOS_CONSUMO = [
   "Nenhum",
 ] as const;
 
-export type TipoUnidade = (typeof TIPOS_UNIDADE)[number];
 export type TipoConsumo = (typeof TIPOS_CONSUMO)[number];
+
+export const includeTipoUnidade = {
+  tipoUnidade: {
+    select: {
+      id: true,
+      nome: true,
+    },
+  },
+  bloco: {
+    select: {
+      id: true,
+      nome: true,
+    },
+  },
+} as const;
+
+export function nomeTipoUnidade(
+  tipo: string | { nome: string } | null | undefined,
+) {
+  if (!tipo) {
+    return "";
+  }
+
+  return typeof tipo === "string" ? tipo : tipo.nome;
+}
 
 export function gerarNumerosUnidades(
   unidadeInicial: number,

@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
+import { includeTipoUnidade } from "@/lib/unidades";
 import { unidadeLoteSchema, unidadeSchema } from "@/lib/validations";
+
+const includeUnidade = {
+  condominio: {
+    select: { id: true, nome: true },
+  },
+  ...includeTipoUnidade,
+} as const;
 
 export async function GET(request: Request) {
   const { error } = await requireApiSession(request);
@@ -16,11 +25,9 @@ export async function GET(request: Request) {
 
   const unidades = await prisma.unidade.findMany({
     where: condominioId ? { condominioId } : undefined,
-    orderBy: [{ bloco: "asc" }, { numero: "asc" }],
+    orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
     include: {
-      condominio: {
-        select: { id: true, nome: true },
-      },
+      ...includeUnidade,
       _count: {
         select: { leituras: true },
       },
@@ -64,13 +71,48 @@ export async function POST(request: Request) {
       );
     }
 
-    const bloco = parsed.data.bloco.trim();
+    const resolvido = await resolverBlocoDoCondominio(
+      parsed.data.condominioId,
+      parsed.data.blocoId,
+    );
+
+    if (resolvido.error) {
+      return NextResponse.json({ error: resolvido.error }, { status: 400 });
+    }
+
+    const { blocoId } = resolvido;
+
+    const tipoUnidade = await prisma.tipoUnidade.findUnique({
+      where: { id: parsed.data.tipoUnidadeId },
+    });
+
+    if (!tipoUnidade) {
+      return NextResponse.json(
+        { error: "Tipo de unidade não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    if (tipoUnidade.condominioId !== parsed.data.condominioId) {
+      return NextResponse.json(
+        { error: "O tipo de unidade não pertence ao condomínio selecionado." },
+        { status: 400 },
+      );
+    }
+
+    if (tipoUnidade.blocoId !== blocoId) {
+      return NextResponse.json(
+        { error: "O tipo de unidade não pertence ao bloco selecionado." },
+        { status: 400 },
+      );
+    }
+
     const numero = parsed.data.numero.trim();
     const existente = await prisma.unidade.findUnique({
       where: {
-        condominioId_bloco_numero: {
+        condominioId_blocoId_numero: {
           condominioId: parsed.data.condominioId,
-          bloco,
+          blocoId,
           numero,
         },
       },
@@ -88,16 +130,12 @@ export async function POST(request: Request) {
         numero,
         nomeMorador: toTitleCase(parsed.data.nomeMorador),
         celular: onlyDigits(parsed.data.celular),
-        tipoUnidade: parsed.data.tipoUnidade,
+        tipoUnidadeId: parsed.data.tipoUnidadeId,
         tipoConsumo: parsed.data.tipoConsumo,
-        bloco,
+        blocoId,
         condominioId: parsed.data.condominioId,
       },
-      include: {
-        condominio: {
-          select: { id: true, nome: true },
-        },
-      },
+      include: includeUnidade,
     });
 
     return NextResponse.json(unidade, { status: 201 });
@@ -130,7 +168,42 @@ async function criarLote(body: unknown) {
     );
   }
 
-  const bloco = parsed.data.bloco.trim();
+  const resolvido = await resolverBlocoDoCondominio(
+    parsed.data.condominioId,
+    parsed.data.blocoId,
+  );
+
+  if (resolvido.error) {
+    return NextResponse.json({ error: resolvido.error }, { status: 400 });
+  }
+
+  const { blocoId } = resolvido;
+
+  const tipoUnidade = await prisma.tipoUnidade.findUnique({
+    where: { id: parsed.data.tipoUnidadeId },
+  });
+
+  if (!tipoUnidade) {
+    return NextResponse.json(
+      { error: "Tipo de unidade não encontrado." },
+      { status: 404 },
+    );
+  }
+
+  if (tipoUnidade.condominioId !== parsed.data.condominioId) {
+    return NextResponse.json(
+      { error: "O tipo de unidade não pertence ao condomínio selecionado." },
+      { status: 400 },
+    );
+  }
+
+  if (tipoUnidade.blocoId !== blocoId) {
+    return NextResponse.json(
+      { error: "O tipo de unidade não pertence ao bloco selecionado." },
+      { status: 400 },
+    );
+  }
+
   const numeros = [...new Set(parsed.data.numeros)];
 
   await prisma.unidade.createMany({
@@ -138,9 +211,9 @@ async function criarLote(body: unknown) {
       numero,
       nomeMorador: "",
       celular: "",
-      tipoUnidade: parsed.data.tipoUnidade,
+      tipoUnidadeId: parsed.data.tipoUnidadeId,
       tipoConsumo: parsed.data.tipoConsumo,
-      bloco,
+      blocoId,
       condominioId: parsed.data.condominioId,
     })),
     skipDuplicates: true,
@@ -149,14 +222,10 @@ async function criarLote(body: unknown) {
   const criadas = await prisma.unidade.findMany({
     where: {
       condominioId: parsed.data.condominioId,
-      bloco,
+      blocoId,
       numero: { in: numeros },
     },
-    include: {
-      condominio: {
-        select: { id: true, nome: true },
-      },
-    },
+    include: includeUnidade,
     orderBy: { numero: "asc" },
   });
 

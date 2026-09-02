@@ -85,7 +85,7 @@ export default function AuthScreen() {
       </section>
 
       <section className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
           <div className="mb-8 lg:hidden">
             <p className="text-xs font-semibold tracking-[0.18em] text-teal-700 uppercase">
               Água e Gás
@@ -102,7 +102,7 @@ export default function AuthScreen() {
                 setModo("login");
                 setErro("");
               }}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 modo === "login"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -116,7 +116,7 @@ export default function AuthScreen() {
                 setModo("cadastro");
                 setErro("");
               }}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
                 modo === "cadastro"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -126,10 +126,10 @@ export default function AuthScreen() {
             </button>
           </div>
 
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-3xl font-bold text-slate-900">
             {modo === "login" ? "Acesse o sistema" : "Cadastre-se"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-base text-slate-500">
             {modo === "login"
               ? "Use o e-mail e a senha da sua conta."
               : "Preencha os dados para criar o primeiro acesso."}
@@ -138,7 +138,7 @@ export default function AuthScreen() {
           <form className="mt-6 space-y-4" onSubmit={onSubmit}>
             {modo === "cadastro" && (
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                <span className="mb-1.5 block text-base font-medium text-slate-700">
                   Nome
                 </span>
                 <input
@@ -147,14 +147,14 @@ export default function AuthScreen() {
                   onChange={(event) =>
                     setForm((atual) => ({ ...atual, nome: event.target.value }))
                   }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                   placeholder="Seu nome"
                 />
               </label>
             )}
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              <span className="mb-1.5 block text-base font-medium text-slate-700">
                 E-mail
               </span>
               <input
@@ -164,13 +164,13 @@ export default function AuthScreen() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, email: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className="w-full rounded-lg border border-slate-300 px-3 py-3 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 placeholder="voce@email.com"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
+              <span className="mb-1.5 block text-base font-medium text-slate-700">
                 Senha
               </span>
               <input
@@ -181,14 +181,14 @@ export default function AuthScreen() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, senha: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className="w-full rounded-lg border border-slate-300 px-3 py-3 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                 placeholder="••••••••"
               />
             </label>
 
             {modo === "cadastro" && (
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-700">
+                <span className="mb-1.5 block text-base font-medium text-slate-700">
                   Confirmar senha
                 </span>
                 <input
@@ -202,14 +202,14 @@ export default function AuthScreen() {
                       confirmarSenha: event.target.value,
                     }))
                   }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
                   placeholder="••••••••"
                 />
               </label>
             )}
 
             {erro && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-base text-red-700">
                 {erro}
               </p>
             )}
@@ -217,7 +217,7 @@ export default function AuthScreen() {
             <button
               type="submit"
               disabled={enviando}
-              className="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-lg bg-teal-700 px-4 py-3 text-lg font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {enviando
                 ? "Aguarde..."

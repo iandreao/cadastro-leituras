@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isValidCnpj, onlyDigits } from "@/lib/masks";
-import { TIPOS_CONSUMO, TIPOS_UNIDADE } from "@/lib/unidades";
+import { TIPOS_CONSUMO } from "@/lib/unidades";
 
 export const cadastroSchema = z
   .object({
@@ -42,17 +42,17 @@ export const unidadeSchema = z.object({
       (value) => value === "" || onlyDigits(value).length >= 10,
       "Informe um celular válido.",
     ),
-  tipoUnidade: z.enum(TIPOS_UNIDADE),
+  tipoUnidadeId: z.string().min(1, "Selecione o tipo de unidade."),
   tipoConsumo: z.enum(TIPOS_CONSUMO),
-  bloco: z.string().trim().default(""),
+  blocoId: z.string().min(1, "Selecione o bloco/torre."),
   condominioId: z.string().min(1, "Selecione o condomínio."),
 });
 
 export const unidadeLoteSchema = z.object({
   condominioId: z.string().min(1, "Selecione o condomínio."),
-  tipoUnidade: z.enum(TIPOS_UNIDADE),
+  tipoUnidadeId: z.string().min(1, "Selecione o tipo de unidade."),
   tipoConsumo: z.enum(TIPOS_CONSUMO),
-  bloco: z.string().trim().default(""),
+  blocoId: z.string().min(1, "Selecione o bloco/torre."),
   numeros: z
     .array(z.string().trim().min(1))
     .min(1, "Informe as unidades do lote.")
@@ -84,14 +84,49 @@ export const leituraLoteSchema = z.object({
 
 export const FORMAS_COBRANCA = ["consumo", "divisao_igual"] as const;
 
+const valorOpcional = z
+  .union([z.number(), z.string(), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    const numero =
+      typeof value === "number"
+        ? value
+        : Number(String(value).trim().replace(",", "."));
+
+    return Number.isFinite(numero) ? numero : null;
+  });
+
 export const despesaMensalSchema = z.object({
   condominioId: z.string().min(1, "Selecione o condomínio."),
-  bloco: z.string().trim().default(""),
+  blocoId: z.string().min(1, "Selecione o bloco/torre."),
   mes: z.coerce.number().int().min(1).max(12),
   ano: z.coerce.number().int().min(2000).max(2100),
   tipoDespesaId: z.string().min(1, "Selecione o tipo de despesa."),
-  valorTotal: z.coerce.number().positive("Informe um valor total maior que zero."),
+  valorTotal: valorOpcional,
+  valorFixo: valorOpcional,
+  valorVariavel: valorOpcional,
   formaCobranca: z.enum(FORMAS_COBRANCA),
+});
+
+export const blocoCadastroSchema = z.object({
+  nome: z.string().trim().min(2, "Informe o nome do bloco/torre."),
+  condominioId: z.string().min(1, "Selecione o condomínio."),
+});
+
+export const tipoUnidadeSchema = z.object({
+  nome: z.string().trim().min(2, "Informe o nome do tipo de unidade."),
+  condominioId: z.string().min(1, "Selecione o condomínio."),
+  blocoId: z.string().min(1, "Selecione o bloco/torre."),
+});
+
+export const tipoDespesaConfigSchema = z.object({
+  nome: z.string().trim().min(2, "Informe o nome do tipo de despesa."),
+  condominioId: z.string().min(1, "Selecione o condomínio."),
+  blocoId: z.string().min(1, "Selecione o bloco/torre."),
+  tipoUnidadeIds: z.array(z.string().min(1)).default([]),
 });
 
 export const apuracaoSchema = z.object({

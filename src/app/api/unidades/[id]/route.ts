@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
+import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
+import { includeTipoUnidade } from "@/lib/unidades";
 import { unidadeSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const includeUnidade = {
+  condominio: {
+    select: { id: true, nome: true },
+  },
+  ...includeTipoUnidade,
+} as const;
 
 export async function PUT(request: Request, context: RouteContext) {
   const { error } = await requireApiSession(request);
@@ -46,13 +55,48 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const bloco = parsed.data.bloco.trim();
+    const tipoUnidade = await prisma.tipoUnidade.findUnique({
+      where: { id: parsed.data.tipoUnidadeId },
+    });
+
+    if (!tipoUnidade) {
+      return NextResponse.json(
+        { error: "Tipo de unidade não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    if (tipoUnidade.condominioId !== parsed.data.condominioId) {
+      return NextResponse.json(
+        { error: "O tipo de unidade não pertence ao condomínio selecionado." },
+        { status: 400 },
+      );
+    }
+
+    const resolvido = await resolverBlocoDoCondominio(
+      parsed.data.condominioId,
+      parsed.data.blocoId,
+    );
+
+    if (resolvido.error) {
+      return NextResponse.json({ error: resolvido.error }, { status: 400 });
+    }
+
+    const { blocoId } = resolvido;
+
+    if (tipoUnidade.blocoId !== blocoId) {
+      return NextResponse.json(
+        { error: "O tipo de unidade não pertence ao bloco selecionado." },
+        { status: 400 },
+      );
+    }
+
     const numero = parsed.data.numero.trim();
     const outra = await prisma.unidade.findUnique({
       where: {
-        condominioId_bloco_numero: {
+        condominioId_blocoId_numero: {
           condominioId: parsed.data.condominioId,
-          bloco,
+          blocoId,
           numero,
         },
       },
@@ -71,16 +115,12 @@ export async function PUT(request: Request, context: RouteContext) {
         numero,
         nomeMorador: toTitleCase(parsed.data.nomeMorador),
         celular: onlyDigits(parsed.data.celular),
-        tipoUnidade: parsed.data.tipoUnidade,
+        tipoUnidadeId: parsed.data.tipoUnidadeId,
         tipoConsumo: parsed.data.tipoConsumo,
-        bloco,
+        blocoId,
         condominioId: parsed.data.condominioId,
       },
-      include: {
-        condominio: {
-          select: { id: true, nome: true },
-        },
-      },
+      include: includeUnidade,
     });
 
     return NextResponse.json(unidade);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
+import { garantirBlocoPadrao } from "@/lib/blocos-db";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { condominioSchema } from "@/lib/validations";
 
@@ -69,6 +70,8 @@ export async function POST(request: Request) {
         celular: onlyDigits(parsed.data.celular),
       },
     });
+
+    await garantirBlocoPadrao(condominio.id);
 
     return NextResponse.json(condominio, { status: 201 });
   } catch {

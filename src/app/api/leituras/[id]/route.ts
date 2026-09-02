@@ -11,8 +11,13 @@ const includeUnidade = {
     select: {
       id: true,
       numero: true,
-      bloco: true,
-      tipoUnidade: true,
+      blocoId: true,
+      bloco: {
+        select: { id: true, nome: true },
+      },
+      tipoUnidade: {
+        select: { id: true, nome: true },
+      },
       tipoConsumo: true,
       nomeMorador: true,
       condominioId: true,

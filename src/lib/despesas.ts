@@ -1,3 +1,4 @@
+import { garantirBlocoPadrao } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 
 export const TIPOS_DESPESA_PADRAO = [
@@ -18,6 +19,15 @@ export const FORMAS_COBRANCA_LABEL = {
 
 export type FormaCobranca = keyof typeof FORMAS_COBRANCA_LABEL;
 
+export function ehAguaPorConsumo(tipoNome: string, formaCobranca: string) {
+  return tipoNome === "Água" && formaCobranca === "consumo";
+}
+
+export function parseValorMonetario(valor: string) {
+  const numero = Number(valor.trim().replace(",", "."));
+  return Number.isFinite(numero) ? numero : Number.NaN;
+}
+
 export function rotuloFormaCobranca(forma: string) {
   if (forma === "consumo" || forma === "divisao_igual") {
     return FORMAS_COBRANCA_LABEL[forma];
@@ -33,33 +43,21 @@ export function formatarMoeda(valor: number) {
   }).format(Number(valor));
 }
 
-export async function garantirTiposDespesa() {
-  const energia = await prisma.tipoDespesa.findUnique({
-    where: { nome: "Energia" },
-  });
-  const aguaCondominio = await prisma.tipoDespesa.findUnique({
-    where: { nome: "Água Condominio" },
-  });
-
-  if (energia && !aguaCondominio) {
-    await prisma.tipoDespesa.update({
-      where: { id: energia.id },
-      data: { nome: "Água Condominio" },
-    });
-  } else if (energia && aguaCondominio) {
-    await prisma.despesaMensal.updateMany({
-      where: { tipoDespesaId: energia.id },
-      data: { tipoDespesaId: aguaCondominio.id },
-    });
-    await prisma.tipoDespesa.delete({ where: { id: energia.id } });
-  }
+export async function garantirTiposDespesa(condominioId: string) {
+  const bloco = await garantirBlocoPadrao(condominioId);
 
   await Promise.all(
     TIPOS_DESPESA_PADRAO.map((nome) =>
       prisma.tipoDespesa.upsert({
-        where: { nome },
+        where: {
+          nome_condominioId_blocoId: {
+            nome,
+            condominioId,
+            blocoId: bloco.id,
+          },
+        },
         update: {},
-        create: { nome },
+        create: { nome, condominioId, blocoId: bloco.id },
       }),
     ),
   );

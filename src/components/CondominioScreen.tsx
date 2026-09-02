@@ -1,6 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import {
+  AREA_ROLAVEL,
+  CARTAO_FORMULARIO,
+  CARTAO_LISTA,
+  GRADE_CADASTRO,
+} from "@/lib/layout-cadastro";
 import { maskCelular, maskCnpj, toTitleCase } from "@/lib/masks";
 
 type Condominio = {
@@ -173,14 +179,14 @@ export default function CondominioScreen({
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm">
-        <h2 className="text-3xl font-medium text-slate-900">{titulo}</h2>
-        <p className="mt-1 text-lg text-slate-600">
+    <div className={GRADE_CADASTRO}>
+      <section className={CARTAO_FORMULARIO}>
+        <h2 className="shrink-0 text-3xl font-medium text-slate-900">{titulo}</h2>
+        <p className="mt-1 shrink-0 text-lg text-slate-600">
           O CNPJ é consultado na Receita Federal ao completar 14 dígitos.
         </p>
 
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+        <form className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`} onSubmit={onSubmit}>
           <Campo
             label="CNPJ"
             value={form.cnpj}
@@ -249,9 +255,11 @@ export default function CondominioScreen({
         </form>
       </section>
 
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm max-h-[calc(100vh-200px)]">
+      <aside className={CARTAO_LISTA}>
         <div className="mb-4 flex shrink-0 items-center justify-between">
-          <h3 className="text-2xl font-medium text-slate-900">Condomínios</h3>
+          <h3 className="text-2xl font-medium text-slate-900">
+            Condomínios Cadastrados
+          </h3>
           <button
             type="button"
             onClick={cancelar}
@@ -261,59 +269,74 @@ export default function CondominioScreen({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto max-h-[calc(100vh-200px)] pr-1">
-          {lista.length === 0 && (
-            <p className="text-lg text-slate-500">Nenhum condomínio incluído.</p>
-          )}
-
-          {lista.map((item) => (
-            <article
-              key={item.id}
-              className={`rounded-xl border p-4 ${
-                editandoId === item.id
-                  ? "border-teal-600 bg-teal-50/50"
-                  : "border-slate-200"
-              }`}
-            >
-              <p className="text-lg font-medium text-slate-900">
-                {toTitleCase(item.nome)}
-              </p>
-              <p className="mt-1 text-lg text-slate-600">{maskCnpj(item.cnpj)}</p>
-              <p className="mt-1 text-lg text-slate-600">
-                {toTitleCase(item.endereco)}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => alterar(item)}
-                  className="rounded-md bg-slate-900 px-3 py-1.5 text-lg font-medium text-white"
-                >
-                  Alterar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void excluir(item)}
-                  disabled={Boolean(item.temLeitura)}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-lg font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Excluir
-                </button>
-                {item.temLeitura ? (
-                  <p className="w-full text-base font-medium text-red-700">
-                    Exclusão bloqueada: há leitura vinculada a unidade deste condomínio.
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={cancelar}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-lg font-medium text-slate-700"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+        {lista.length === 0 ? (
+          <p className="text-lg text-slate-500">Nenhum condomínio incluído.</p>
+        ) : (
+          <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
+            <table className="w-full border-collapse text-base">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Nome
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium whitespace-nowrap text-slate-700">
+                    CNPJ
+                  </th>
+                  <th className="min-w-[16rem] border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Endereço
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-center font-medium whitespace-nowrap text-slate-700">
+                    Ação
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {lista.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={
+                      editandoId === item.id ? "bg-teal-50/70" : "bg-white"
+                    }
+                  >
+                    <td className="border border-gray-300 px-3 py-1 font-medium whitespace-nowrap text-slate-900">
+                      {toTitleCase(item.nome)}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                      {maskCnpj(item.cnpj)}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 text-slate-700">
+                      {toTitleCase(item.endereco)}
+                    </td>
+                    <td className="border border-gray-300 p-0 align-middle">
+                      <div className="flex items-center justify-center gap-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => alterar(item)}
+                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                        >
+                          Alterar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void excluir(item)}
+                          disabled={Boolean(item.temLeitura)}
+                          title={
+                            item.temLeitura
+                              ? "Exclusão bloqueada: há leitura vinculada a unidade deste condomínio."
+                              : "Excluir"
+                          }
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </aside>
     </div>
   );

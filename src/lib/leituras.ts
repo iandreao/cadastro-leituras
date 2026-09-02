@@ -61,10 +61,17 @@ export function periodoMenor(
 }
 
 export function rotuloUnidade(unidade: {
-  tipoUnidade: string;
+  tipoUnidade: string | { nome: string };
   numero: string;
-  bloco?: string | null;
+  bloco?: string | { nome: string } | null;
 }) {
-  const bloco = unidade.bloco?.trim();
-  return `${unidade.tipoUnidade} ${unidade.numero}${bloco ? ` • ${bloco}` : ""}`;
+  const bloco =
+    typeof unidade.bloco === "string"
+      ? unidade.bloco.trim()
+      : unidade.bloco?.nome.trim();
+  const tipo =
+    typeof unidade.tipoUnidade === "string"
+      ? unidade.tipoUnidade
+      : unidade.tipoUnidade.nome;
+  return `${tipo} ${unidade.numero}${bloco ? ` • ${bloco}` : ""}`;
 }

@@ -1,12 +1,21 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { nomeBloco, queryEscopoTipo } from "@/lib/blocos";
+import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import {
   FORMAS_COBRANCA_LABEL,
+  ehAguaPorConsumo,
   formatarMoeda,
-  rotuloFormaCobranca,
+  parseValorMonetario,
   type FormaCobranca,
 } from "@/lib/despesas";
+import {
+  AREA_ROLAVEL,
+  CARTAO_FORMULARIO,
+  CARTAO_LISTA,
+  GRADE_CADASTRO,
+} from "@/lib/layout-cadastro";
 import { MESES, anosReferencia, nomeMes } from "@/lib/leituras";
 
 type Condominio = {
@@ -19,18 +28,21 @@ type TipoDespesa = {
   nome: string;
 };
 
-type UnidadeBloco = {
+type BlocoCadastro = {
   id: string;
-  bloco: string;
+  nome: string;
   condominioId: string;
 };
 
 type DespesaMensal = {
   id: string;
-  bloco: string;
+  blocoId: string;
+  bloco: BlocoCadastro | string;
   mes: number;
   ano: number;
   valorTotal: number;
+  valorFixo?: number | null;
+  valorVariavel?: number | null;
   formaCobranca: string;
   condominioId: string;
   tipoDespesaId: string;
@@ -47,54 +59,79 @@ type DespesaMensal = {
 const campoClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
-const agora = new Date();
-
 export default function DespesaScreen({
   condominiosIniciais,
   tiposIniciais,
-  unidadesIniciais,
+  blocosIniciais,
   despesasIniciais,
 }: {
   condominiosIniciais: Condominio[];
   tiposIniciais: TipoDespesa[];
-  unidadesIniciais: UnidadeBloco[];
+  blocosIniciais: BlocoCadastro[];
   despesasIniciais: DespesaMensal[];
 }) {
   const [condominios] = useState(condominiosIniciais);
-  const [tipos] = useState(tiposIniciais);
-  const [unidades, setUnidades] = useState(unidadesIniciais);
-  const [despesas, setDespesas] = useState(despesasIniciais);
+  const [tipos, setTipos] = useState<TipoDespesa[]>(tiposIniciais);
+  const [blocos, setBlocos] = useState(blocosIniciais);
+  const [despesas, setDespesas] = useState<DespesaMensal[]>(despesasIniciais);
   const [condominioId, setCondominioId] = useState("");
-  const [bloco, setBloco] = useState("");
-  const [mes, setMes] = useState(agora.getMonth() + 1);
-  const [ano, setAno] = useState(agora.getFullYear());
-  const [tipoDespesaId, setTipoDespesaId] = useState(tiposIniciais[0]?.id ?? "");
+  const [blocoId, setBlocoId] = useState("");
+  const [mes, setMes] = useState<number | "">("");
+  const [ano, setAno] = useState<number | "">("");
+  const [tipoDespesaId, setTipoDespesaId] = useState("");
   const [valorTotal, setValorTotal] = useState("");
+  const [valorFixo, setValorFixo] = useState("");
+  const [valorVariavel, setValorVariavel] = useState("");
   const [formaCobranca, setFormaCobranca] = useState<FormaCobranca>("consumo");
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [salvando, setSalvando] = useState(false);
+  usePublicarCondominio(condominioId, condominios);
 
-  const blocosDoCondominio = useMemo(() => {
-    const nomes = new Set<string>();
+  const blocosDoCondominio = useMemo(
+    () =>
+      blocos
+        .filter((item) => item.condominioId === condominioId)
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [condominioId, blocos],
+  );
 
-    for (const unidade of unidades) {
-      if (unidade.condominioId === condominioId && unidade.bloco.trim()) {
-        nomes.add(unidade.bloco.trim());
-      }
+  const tipoSelecionado = tipos.find((item) => item.id === tipoDespesaId);
+  const aguaPorConsumo = ehAguaPorConsumo(
+    tipoSelecionado?.nome ?? "",
+    formaCobranca,
+  );
+
+  const despesasVisiveis = useMemo(() => {
+    if (!condominioId) {
+      return [];
     }
 
-    return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [condominioId, unidades]);
+    return despesas.filter((item) => {
+      if (item.condominioId !== condominioId) {
+        return false;
+      }
 
-  const temUnidadeSemBloco = useMemo(
-    () =>
-      unidades.some(
-        (unidade) =>
-          unidade.condominioId === condominioId && !unidade.bloco.trim(),
-      ),
-    [condominioId, unidades],
-  );
+      if (blocoId && item.blocoId !== blocoId) {
+        return false;
+      }
+
+      if (mes !== "" && item.mes !== mes) {
+        return false;
+      }
+
+      if (ano !== "" && item.ano !== ano) {
+        return false;
+      }
+
+      if (tipoDespesaId && item.tipoDespesaId !== tipoDespesaId) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [ano, blocoId, condominioId, despesas, mes, tipoDespesaId]);
 
   async function carregar(filtroCondominioId = condominioId, filtroBloco?: string) {
     const params = new URLSearchParams();
@@ -103,8 +140,8 @@ export default function DespesaScreen({
       params.set("condominioId", filtroCondominioId);
     }
 
-    if (filtroBloco !== undefined) {
-      params.set("bloco", filtroBloco);
+    if (filtroBloco) {
+      params.set("blocoId", filtroBloco);
     }
 
     const query = params.toString();
@@ -113,33 +150,93 @@ export default function DespesaScreen({
     setDespesas(listaDespesas);
   }
 
+  async function carregarTipos(id: string, blocoAtual: string) {
+    if (!id || !blocoAtual) {
+      setTipos([]);
+      setTipoDespesaId("");
+      return;
+    }
+
+    const response = await fetch(
+      `/api/tipos-despesas?${queryEscopoTipo(id, blocoAtual)}`,
+    );
+    const listaTipos = (await response.json()) as TipoDespesa[] | { error?: string };
+
+    if (response.ok && Array.isArray(listaTipos)) {
+      setTipos(listaTipos);
+      setTipoDespesaId((atual) =>
+        listaTipos.some((tipo) => tipo.id === atual) ? atual : "",
+      );
+    } else {
+      setTipos([]);
+      setTipoDespesaId("");
+    }
+  }
+
   async function onCondominioChange(id: string) {
     setCondominioId(id);
-    setBloco("");
+    setBlocoId("");
     setErro("");
     setInfo("");
 
     if (!id) {
-      await carregar("", undefined);
+      setTipos([]);
+      setTipoDespesaId("");
       return;
     }
 
-    const response = await fetch(`/api/unidades?condominioId=${id}`);
-    const listaUnidades = (await response.json()) as UnidadeBloco[];
-    setUnidades((atual) => {
+    const resBlocos = await fetch(`/api/blocos?condominioId=${id}`);
+    const listaBlocos = (await resBlocos.json()) as BlocoCadastro[] | { error?: string };
+    setBlocos((atual) => {
       const demais = atual.filter((item) => item.condominioId !== id);
-      return [...demais, ...listaUnidades];
+      return [...demais, ...(Array.isArray(listaBlocos) ? listaBlocos : [])];
     });
+    setTipos([]);
+    setTipoDespesaId("");
     await carregar(id, undefined);
   }
 
   function cancelar() {
-    setBloco("");
-    setTipoDespesaId(tipos[0]?.id ?? "");
+    setEditandoId(null);
     setValorTotal("");
+    setValorFixo("");
+    setValorVariavel("");
     setFormaCobranca("consumo");
     setErro("");
     setInfo("");
+  }
+
+  async function alterar(item: DespesaMensal) {
+    setErro("");
+    setInfo("");
+    setEditandoId(item.id);
+    setCondominioId(item.condominioId);
+    setBlocoId(item.blocoId);
+    setMes(item.mes);
+    setAno(item.ano);
+    setFormaCobranca(
+      item.formaCobranca === "divisao_igual" ? "divisao_igual" : "consumo",
+    );
+    setValorTotal(String(item.valorTotal ?? ""));
+    setValorFixo(item.valorFixo != null ? String(item.valorFixo) : "");
+    setValorVariavel(
+      item.valorVariavel != null ? String(item.valorVariavel) : "",
+    );
+
+    const resBlocos = await fetch(
+      `/api/blocos?condominioId=${item.condominioId}`,
+    );
+    const listaBlocos = (await resBlocos.json()) as
+      | BlocoCadastro[]
+      | { error?: string };
+    setBlocos((atual) => {
+      const demais = atual.filter(
+        (bloco) => bloco.condominioId !== item.condominioId,
+      );
+      return [...demais, ...(Array.isArray(listaBlocos) ? listaBlocos : [])];
+    });
+    await carregarTipos(item.condominioId, item.blocoId);
+    setTipoDespesaId(item.tipoDespesaId);
   }
 
   async function onSubmit(event: FormEvent) {
@@ -149,29 +246,50 @@ export default function DespesaScreen({
     setSalvando(true);
 
     try {
-      const response = await fetch("/api/despesas", {
-        method: "POST",
+      const fixo = parseValorMonetario(valorFixo);
+      const variavel = parseValorMonetario(valorVariavel);
+      const total = aguaPorConsumo
+        ? (Number.isFinite(fixo) ? fixo : 0) + (Number.isFinite(variavel) ? variavel : 0)
+        : parseValorMonetario(valorTotal);
+
+      const url = editandoId
+        ? `/api/despesas/${editandoId}`
+        : "/api/despesas";
+      const response = await fetch(url, {
+        method: editandoId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           condominioId,
-          bloco,
+          blocoId,
           mes,
           ano,
           tipoDespesaId,
-          valorTotal: Number(valorTotal.replace(",", ".")),
+          valorTotal: total,
+          valorFixo: aguaPorConsumo && Number.isFinite(fixo) ? fixo : null,
+          valorVariavel:
+            aguaPorConsumo && Number.isFinite(variavel) ? variavel : null,
           formaCobranca,
         }),
       });
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setErro(data.error ?? "Não foi possível cadastrar a despesa.");
+        setErro(
+          data.error ??
+            (editandoId
+              ? "Não foi possível atualizar a despesa."
+              : "Não foi possível cadastrar a despesa."),
+        );
         return;
       }
 
+      const alterando = Boolean(editandoId);
       setValorTotal("");
-      setInfo("Despesa lançada.");
-      await carregar(condominioId, undefined);
+      setValorFixo("");
+      setValorVariavel("");
+      setEditandoId(null);
+      setInfo(alterando ? "Despesa atualizada." : "Despesa lançada.");
+      await carregar(condominioId);
     } catch {
       setErro("Falha de conexão. Tente novamente.");
     } finally {
@@ -198,19 +316,25 @@ export default function DespesaScreen({
     }
 
     setDespesas((atual) => atual.filter((despesa) => despesa.id !== item.id));
+    if (editandoId === item.id) {
+      cancelar();
+    }
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-6 md:grid-cols-2">
-      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm">
-        <h2 className="text-3xl font-medium text-slate-900">
+    <div className={GRADE_CADASTRO}>
+      <section className={CARTAO_FORMULARIO}>
+        <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           Incluir Despesas do Mês
         </h2>
-        <p className="mt-1 text-lg text-slate-600">
+        <p className="mt-1 shrink-0 text-lg text-slate-600">
           Informe o valor total da despesa e como ela será cobrada nas unidades.
         </p>
 
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+        <form
+          className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`}
+          onSubmit={onSubmit}
+        >
           <label className="block">
             <span className="mb-1.5 block text-lg font-medium text-slate-700">
               Condomínio
@@ -232,31 +356,34 @@ export default function DespesaScreen({
 
           <label className="block">
             <span className="mb-1.5 block text-lg font-medium text-slate-700">
-              Bloco
+              Bloco/Torre
             </span>
             <select
-              value={bloco}
+              required
+              value={blocoId}
               onChange={(event) => {
                 const valor = event.target.value;
-                setBloco(valor);
+                setBlocoId(valor);
+                setTipoDespesaId("");
                 if (condominioId) {
-                  void carregar(condominioId, valor || undefined);
+                  void carregarTipos(condominioId, valor);
                 }
               }}
               disabled={!condominioId}
               className={campoClass}
             >
-              <option value="">
-                {temUnidadeSemBloco || blocosDoCondominio.length === 0
-                  ? "Todo o condomínio"
-                  : "Selecione o bloco"}
-              </option>
-              {blocosDoCondominio.map((nome) => (
-                <option key={nome} value={nome}>
-                  {nome}
+              <option value="">Selecione o bloco</option>
+              {blocosDoCondominio.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome}
                 </option>
               ))}
             </select>
+            {condominioId && blocosDoCondominio.length === 0 ? (
+              <span className="mt-1 block text-base text-slate-500">
+                Cadastre os blocos em Configurações → Blocos / Torres.
+              </span>
+            ) : null}
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -267,9 +394,13 @@ export default function DespesaScreen({
               <select
                 required
                 value={mes}
-                onChange={(event) => setMes(Number(event.target.value))}
+                onChange={(event) => {
+                  const valor = event.target.value;
+                  setMes(valor ? Number(valor) : "");
+                }}
                 className={campoClass}
               >
+                <option value="">Selecione</option>
                 {MESES.map((item) => (
                   <option key={item.valor} value={item.valor}>
                     {item.nome}
@@ -284,9 +415,13 @@ export default function DespesaScreen({
               <select
                 required
                 value={ano}
-                onChange={(event) => setAno(Number(event.target.value))}
+                onChange={(event) => {
+                  const valor = event.target.value;
+                  setAno(valor ? Number(valor) : "");
+                }}
                 className={campoClass}
               >
+                <option value="">Selecione</option>
                 {anosReferencia().map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -315,22 +450,6 @@ export default function DespesaScreen({
             </select>
           </label>
 
-          <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
-              Valor total
-            </span>
-            <input
-              required
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={valorTotal}
-              onChange={(event) => setValorTotal(event.target.value)}
-              className={campoClass}
-              placeholder="0,00"
-            />
-          </label>
-
           <fieldset>
             <legend className="mb-1.5 block text-lg font-medium text-slate-700">
               Forma de Rateio
@@ -357,6 +476,57 @@ export default function DespesaScreen({
             </div>
           </fieldset>
 
+          {aguaPorConsumo ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                  Valor Fixo (R$)
+                </span>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valorFixo}
+                  onChange={(event) => setValorFixo(event.target.value)}
+                  className={campoClass}
+                  placeholder="0,00"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                  Valor Variável (R$)
+                </span>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={valorVariavel}
+                  onChange={(event) => setValorVariavel(event.target.value)}
+                  className={campoClass}
+                  placeholder="0,00"
+                />
+              </label>
+            </div>
+          ) : (
+            <label className="block">
+              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                Valor total
+              </span>
+              <input
+                required
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={valorTotal}
+                onChange={(event) => setValorTotal(event.target.value)}
+                className={campoClass}
+                placeholder="0,00"
+              />
+            </label>
+          )}
+
           {info && (
             <p className="rounded-lg bg-teal-50 px-3 py-2 text-lg text-teal-800">
               {info}
@@ -374,7 +544,11 @@ export default function DespesaScreen({
               disabled={salvando}
               className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
             >
-              {salvando ? "Salvando..." : "Lançar despesa"}
+              {salvando
+                ? "Salvando..."
+                : editandoId
+                  ? "Salvar alteração"
+                  : "Lançar despesa"}
             </button>
             <button
               type="button"
@@ -387,44 +561,85 @@ export default function DespesaScreen({
         </form>
       </section>
 
-      <section className="flex h-[calc(100vh-4rem)] min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className={CARTAO_LISTA}>
         <h3 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
-          Despesas cadastradas
+          Despesas Cadastradas
         </h3>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
-          {despesas.length === 0 && (
-            <p className="text-lg text-slate-500">Nenhuma despesa lançada.</p>
-          )}
-
-          {despesas.map((item) => (
-            <article
-              key={item.id}
-              className="rounded-xl border border-slate-200 p-4"
-            >
-              <p className="text-lg font-medium text-slate-900">
-                {item.tipoDespesa.nome} • {formatarMoeda(item.valorTotal)}
-              </p>
-              <p className="mt-1 text-lg text-slate-600">
-                {item.condominio.nome}
-                {item.bloco ? ` • ${item.bloco}` : ""}
-              </p>
-              <p className="mt-1 text-lg text-slate-600">
-                {nomeMes(item.mes)}/{item.ano} •{" "}
-                {rotuloFormaCobranca(item.formaCobranca)}
-              </p>
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={() => void excluir(item)}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-lg font-medium text-white"
-                >
-                  Excluir
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+        {!condominioId ? (
+          <p className="text-lg text-slate-500">
+            Selecione o condomínio para listar as despesas.
+          </p>
+        ) : despesasVisiveis.length === 0 ? (
+          <p className="text-lg text-slate-500">
+            Nenhuma despesa encontrada para os filtros selecionados.
+          </p>
+        ) : (
+          <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
+            <table className="w-full border-collapse text-base">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr>
+                  <th className="min-w-[12rem] border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Tipo
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium whitespace-nowrap text-slate-700">
+                    Período
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Bloco
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-right font-medium whitespace-nowrap text-slate-700">
+                    Valor
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-center font-medium whitespace-nowrap text-slate-700">
+                    Ação
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {despesasVisiveis.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={
+                      editandoId === item.id ? "bg-teal-50/70" : "bg-white"
+                    }
+                  >
+                    <td className="border border-gray-300 px-3 py-1 font-medium text-slate-900">
+                      {item.tipoDespesa.nome}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                      {nomeMes(item.mes)}/{item.ano}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                      {nomeBloco(item.bloco) || "—"}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 text-right whitespace-nowrap text-slate-800">
+                      {formatarMoeda(item.valorTotal)}
+                    </td>
+                    <td className="border border-gray-300 p-0 align-middle">
+                      <div className="flex items-center justify-center gap-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void alterar(item)}
+                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                        >
+                          Alterar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void excluir(item)}
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

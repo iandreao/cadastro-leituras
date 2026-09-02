@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
 
 const itens = [
   { href: "/condominios", label: "Incluir Condomínio" },
+  { href: "/configuracoes/blocos", label: "Incluir Blocos / Torres" },
+  { href: "/configuracoes/tipos-unidades", label: "Incluir Tipos de Unidade" },
   { href: "/unidades", label: "Incluir Unidade" },
+  { href: "/configuracoes/tipos-despesas", label: "Incluir Tipos de Despesas" },
+  { href: "/despesas", label: "Incluir Despesas do Mês" },
   { href: "/leituras/agua", label: "Inserir Leitura de Água" },
   { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
-  { href: "/despesas", label: "Lançar Despesas do Mês" },
-  { href: "/apuracao", label: "Apuração de Despesas" },
+  { href: "/apuracao", label: "Apurar Despesas do Mês" },
 ];
 
-export default function Sidebar({ nome }: { nome: string }) {
+export default function Sidebar() {
   const pathname = usePathname();
+  const { selecionado } = useCondominioSelecionado();
+  const nomeCondominio = selecionado?.nome ?? "Selecione um Condomínio";
 
   async function sair() {
     try {
@@ -33,12 +39,9 @@ export default function Sidebar({ nome }: { nome: string }) {
     <aside className="flex w-full shrink-0 flex-col bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
       <div className="border-b border-white/10 px-6 py-6">
         <p className="text-base font-medium tracking-[0.2em] text-teal-200 uppercase">
-          Água e Gás
+          GESTÃO DE CONDOMINIO
         </p>
-        <h1 className="mt-1 text-xl font-medium leading-7">
-          Cadastro de Leituras
-        </h1>
-        <p className="mt-3 truncate text-lg text-teal-100/80">{nome}</p>
+        <p className="mt-3 truncate text-lg text-teal-100/80">{nomeCondominio}</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-4">

@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { nomeBloco } from "@/lib/blocos";
+import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { toTitleCase } from "@/lib/masks";
 import {
   anosReferencia,
@@ -21,8 +23,8 @@ type Condominio = {
 type Unidade = {
   id: string;
   numero: string;
-  bloco: string;
-  tipoUnidade: string;
+  bloco: string | { nome: string };
+  tipoUnidade: { id: string; nome: string };
   tipoConsumo: string;
   condominioId: string;
 };
@@ -110,6 +112,7 @@ export default function LeituraGradeScreen({
   const [info, setInfo] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  usePublicarCondominio(condominioId, condominios);
 
   const mesNumero = Number(mes);
   const anoNumero = Number(ano);
@@ -142,7 +145,7 @@ export default function LeituraGradeScreen({
         }
 
         const ordenadas = [...listaUnidades].sort((a, b) => {
-          const bloco = (a.bloco || "").localeCompare(b.bloco || "", "pt-BR");
+          const bloco = nomeBloco(a.bloco).localeCompare(nomeBloco(b.bloco), "pt-BR");
           if (bloco !== 0) {
             return bloco;
           }

@@ -1,16 +1,33 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { nomeBloco, queryEscopoTipo } from "@/lib/blocos";
+import { usePublicarCondominio } from "@/lib/condominio-selecionado";
+import {
+  AREA_ROLAVEL,
+  CARTAO_FORMULARIO,
+  CARTAO_LISTA,
+  GRADE_CADASTRO,
+} from "@/lib/layout-cadastro";
 import { maskCelular, toTitleCase } from "@/lib/masks";
 import {
   gerarNumerosUnidades,
+  nomeTipoUnidade,
   TIPOS_CONSUMO,
-  TIPOS_UNIDADE,
   type TipoConsumo,
-  type TipoUnidade,
 } from "@/lib/unidades";
 
 type Condominio = {
+  id: string;
+  nome: string;
+};
+
+type TipoUnidadeCadastro = {
+  id: string;
+  nome: string;
+};
+
+type BlocoCadastro = {
   id: string;
   nome: string;
 };
@@ -20,9 +37,11 @@ type Unidade = {
   numero: string;
   nomeMorador: string;
   celular: string;
-  tipoUnidade: string;
+  tipoUnidadeId: string;
+  tipoUnidade: TipoUnidadeCadastro | string;
   tipoConsumo: string;
-  bloco: string;
+  blocoId: string;
+  bloco: BlocoCadastro | string;
   condominioId: string;
   condominio: {
     id: string;
@@ -41,15 +60,19 @@ const campoClass =
 export default function UnidadeScreen({
   condominiosIniciais,
   unidadesIniciais,
+  tiposIniciais,
 }: {
   condominiosIniciais: Condominio[];
   unidadesIniciais: Unidade[];
+  tiposIniciais: TipoUnidadeCadastro[];
 }) {
   const [condominios, setCondominios] = useState<Condominio[]>(condominiosIniciais);
   const [unidades, setUnidades] = useState<Unidade[]>(unidadesIniciais);
+  const [tipos, setTipos] = useState<TipoUnidadeCadastro[]>(tiposIniciais);
+  const [blocos, setBlocos] = useState<BlocoCadastro[]>([]);
   const [condominioId, setCondominioId] = useState("");
-  const [bloco, setBloco] = useState("");
-  const [tipoUnidade, setTipoUnidade] = useState<TipoUnidade>("Apartamento");
+  const [blocoId, setBlocoId] = useState("");
+  const [tipoUnidadeId, setTipoUnidadeId] = useState(tiposIniciais[0]?.id ?? "");
   const [tipoConsumo, setTipoConsumo] = useState<TipoConsumo>("Água/Gás");
   const [modo, setModo] = useState<ModoCadastro>("individual");
   const [numero, setNumero] = useState("");
@@ -62,8 +85,51 @@ export default function UnidadeScreen({
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [salvando, setSalvando] = useState(false);
+  usePublicarCondominio(condominioId, condominios);
 
   const modoAtual = editandoId ? "individual" : modo;
+
+  async function carregarBlocos(id: string) {
+    if (!id) {
+      setBlocos([]);
+      return;
+    }
+
+    const response = await fetch(`/api/blocos?condominioId=${id}`);
+    const lista = (await response.json()) as BlocoCadastro[] | { error?: string };
+    setBlocos(Array.isArray(lista) ? lista : []);
+  }
+
+  async function carregarTipos(
+    id: string,
+    preferido?: string,
+    blocoAtual = blocoId,
+  ) {
+    if (!id || !blocoAtual) {
+      setTipos([]);
+      setTipoUnidadeId("");
+      return;
+    }
+
+    const response = await fetch(
+      `/api/tipos-unidades?${queryEscopoTipo(id, blocoAtual)}`,
+    );
+    const lista = (await response.json()) as TipoUnidadeCadastro[] | { error?: string };
+
+    if (!response.ok || !Array.isArray(lista)) {
+      setTipos([]);
+      setTipoUnidadeId("");
+      return;
+    }
+
+    setTipos(lista);
+    setTipoUnidadeId((atual) => {
+      const escolhido = preferido || atual;
+      return lista.some((tipo) => tipo.id === escolhido)
+        ? escolhido
+        : (lista[0]?.id ?? "");
+    });
+  }
 
   async function carregar() {
     const [resCondominios, resUnidades] = await Promise.all([
@@ -76,6 +142,10 @@ export default function UnidadeScreen({
 
     setCondominios(listaCondominios);
     setUnidades(listaUnidades);
+    await carregarTipos(condominioId, undefined, blocoId);
+    if (condominioId) {
+      await carregarBlocos(condominioId);
+    }
   }
 
   const unidadesVisiveis = useMemo(() => {
@@ -84,7 +154,7 @@ export default function UnidadeScreen({
       : unidades;
 
     return [...filtradas].sort((a, b) => {
-      const blocoCmp = (a.bloco || "").localeCompare(b.bloco || "", "pt-BR");
+      const blocoCmp = nomeBloco(a.bloco).localeCompare(nomeBloco(b.bloco), "pt-BR");
       if (blocoCmp !== 0) {
         return blocoCmp;
       }
@@ -131,11 +201,18 @@ export default function UnidadeScreen({
 
   function alterar(item: Unidade) {
     setCondominioId(item.condominioId);
-    setBloco(item.bloco || "");
-    setTipoUnidade(
-      TIPOS_UNIDADE.includes(item.tipoUnidade as TipoUnidade)
-        ? (item.tipoUnidade as TipoUnidade)
-        : "Apartamento",
+    const idBloco =
+      item.blocoId ||
+      (typeof item.bloco === "object" ? item.bloco.id : "") ||
+      "";
+    void carregarBlocos(item.condominioId);
+    void carregarTipos(item.condominioId, item.tipoUnidadeId, idBloco);
+    setBlocoId(idBloco);
+    setTipoUnidadeId(
+      item.tipoUnidadeId ||
+        (typeof item.tipoUnidade === "object" ? item.tipoUnidade.id : "") ||
+        tipos[0]?.id ||
+        "",
     );
     setTipoConsumo(
       TIPOS_CONSUMO.includes(item.tipoConsumo as TipoConsumo)
@@ -205,9 +282,9 @@ export default function UnidadeScreen({
               numero: numeroLote,
               nomeMorador: "",
               celular: "",
-              tipoUnidade,
+              tipoUnidadeId,
               tipoConsumo,
-              bloco,
+              blocoId,
               condominioId,
             }),
           });
@@ -269,9 +346,9 @@ export default function UnidadeScreen({
           numero,
           nomeMorador: toTitleCase(nomeMorador),
           celular,
-          tipoUnidade,
+          tipoUnidadeId,
           tipoConsumo,
-          bloco,
+          blocoId,
           condominioId,
         }),
       });
@@ -292,17 +369,17 @@ export default function UnidadeScreen({
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2 lg:items-start">
-      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm">
-        <h2 className="text-3xl font-medium text-slate-900">
+    <div className={GRADE_CADASTRO}>
+      <section className={CARTAO_FORMULARIO}>
+        <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           {editandoId ? "Alterar unidade" : "Incluir unidade"}
         </h2>
-        <p className="mt-1 text-lg text-slate-600">
+        <p className="mt-1 shrink-0 text-lg text-slate-600">
           Cadastre uma unidade ou gere um lote completo por andar.
         </p>
 
         <form
-          className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2"
+          className={`mt-6 grid grid-cols-1 gap-4 ${AREA_ROLAVEL} pr-1 md:grid-cols-2`}
           onSubmit={onSubmit}
         >
           <label className="block md:col-span-2">
@@ -312,7 +389,14 @@ export default function UnidadeScreen({
             <select
               required
               value={condominioId}
-              onChange={(event) => setCondominioId(event.target.value)}
+              onChange={(event) => {
+                const id = event.target.value;
+                setCondominioId(id);
+                setBlocoId("");
+                setTipos([]);
+                setTipoUnidadeId("");
+                void carregarBlocos(id);
+              }}
               className={campoClass}
             >
               <option value="">Selecione</option>
@@ -327,16 +411,32 @@ export default function UnidadeScreen({
           <label className="block">
             <span className="mb-1.5 block text-lg font-medium text-slate-700">
               Bloco/Torre
-              <span className="ml-2 text-base font-normal text-slate-500">
-                (facultativo)
-              </span>
             </span>
-            <input
-              value={bloco}
-              onChange={(event) => setBloco(event.target.value)}
+            <select
+              required
+              value={blocoId}
+              onChange={(event) => {
+                const valor = event.target.value;
+                setBlocoId(valor);
+                if (condominioId) {
+                  void carregarTipos(condominioId, undefined, valor);
+                }
+              }}
+              disabled={!condominioId}
               className={campoClass}
-              placeholder="Bloco A, Torre 2"
-            />
+            >
+              <option value="">Selecione o bloco</option>
+              {blocos.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome}
+                </option>
+              ))}
+            </select>
+            {condominioId && blocos.length === 0 ? (
+              <span className="mt-1 block text-base text-slate-500">
+                Cadastre os blocos em Configurações → Blocos / Torres.
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -345,18 +445,22 @@ export default function UnidadeScreen({
             </span>
             <select
               required
-              value={tipoUnidade}
-              onChange={(event) =>
-                setTipoUnidade(event.target.value as TipoUnidade)
-              }
+              value={tipoUnidadeId}
+              onChange={(event) => setTipoUnidadeId(event.target.value)}
               className={campoClass}
             >
-              {TIPOS_UNIDADE.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
+              <option value="">Selecione</option>
+              {tipos.map((tipo) => (
+                <option key={tipo.id} value={tipo.id}>
+                  {tipo.nome}
                 </option>
               ))}
             </select>
+            {tipos.length === 0 ? (
+              <span className="mt-1 block text-base text-slate-500">
+                Cadastre os tipos em Configurações → Tipos de Unidade.
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -539,9 +643,11 @@ export default function UnidadeScreen({
         </form>
       </section>
 
-      <aside className="flex min-h-0 max-h-[calc(100vh-200px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <aside className={CARTAO_LISTA}>
         <div className="mb-4 flex shrink-0 items-center justify-between">
-          <h3 className="text-2xl font-medium text-slate-900">Unidades</h3>
+          <h3 className="text-2xl font-medium text-slate-900">
+            Unidades Cadastradas
+          </h3>
           <button
             type="button"
             onClick={cancelar}
@@ -551,74 +657,84 @@ export default function UnidadeScreen({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto max-h-[calc(100vh-200px)] pr-1">
-          {unidadesVisiveis.length === 0 && (
-            <p className="text-lg text-slate-500">
-              {condominioId
-                ? "Nenhuma unidade incluída neste condomínio."
-                : "Nenhuma unidade incluída."}
-            </p>
-          )}
-
-          {unidadesVisiveis.map((item) => (
-            <article
-              key={item.id}
-              className={`rounded-xl border p-4 ${
-                editandoId === item.id
-                  ? "border-teal-600 bg-teal-50/50"
-                  : "border-slate-200"
-              }`}
-            >
-              <p className="text-lg font-medium text-slate-900">
-                {item.tipoUnidade} {item.numero}
-                {item.bloco ? ` • ${item.bloco}` : ""}
-              </p>
-              <p className="mt-1 text-base font-medium text-slate-500">
-                {item.tipoConsumo || "Água/Gás"}
-              </p>
-              <p className="mt-1 text-lg text-slate-600">{item.condominio.nome}</p>
-              {item.nomeMorador ? (
-                <p className="mt-1 text-lg text-slate-600">
-                  {toTitleCase(item.nomeMorador)}
-                </p>
-              ) : null}
-              {item.celular ? (
-                <p className="mt-1 text-lg text-slate-600">
-                  {maskCelular(item.celular)}
-                </p>
-              ) : null}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => alterar(item)}
-                  className="rounded-md bg-slate-900 px-3 py-1.5 text-lg font-medium text-white"
-                >
-                  Alterar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void excluir(item)}
-                  disabled={(item._count?.leituras ?? 0) > 0}
-                  className="rounded-md bg-red-600 px-3 py-1.5 text-lg font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Excluir
-                </button>
-                {(item._count?.leituras ?? 0) > 0 ? (
-                  <p className="w-full text-base font-medium text-red-700">
-                    Exclusão bloqueada: há leitura vinculada a esta unidade.
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={cancelar}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-lg font-medium text-slate-700"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+        {unidadesVisiveis.length === 0 ? (
+          <p className="text-lg text-slate-500">
+            {condominioId
+              ? "Nenhuma unidade incluída neste condomínio."
+              : "Nenhuma unidade incluída."}
+          </p>
+        ) : (
+          <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
+            <table className="w-full border-collapse text-base">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Unidade
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Bloco
+                  </th>
+                  <th className="min-w-[16rem] border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Morador
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium whitespace-nowrap text-slate-700">
+                    Consumo
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-center font-medium whitespace-nowrap text-slate-700">
+                    Ação
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {unidadesVisiveis.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={
+                      editandoId === item.id ? "bg-teal-50/70" : "bg-white"
+                    }
+                  >
+                    <td className="border border-gray-300 px-3 py-1 font-medium whitespace-nowrap text-slate-900">
+                      {nomeTipoUnidade(item.tipoUnidade)} {item.numero}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                      {nomeBloco(item.bloco) || "—"}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 text-slate-700">
+                      {item.nomeMorador ? toTitleCase(item.nomeMorador) : "—"}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                      {item.tipoConsumo || "Água/Gás"}
+                    </td>
+                    <td className="border border-gray-300 p-0 align-middle">
+                      <div className="flex items-center justify-center gap-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => alterar(item)}
+                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                        >
+                          Alterar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void excluir(item)}
+                          disabled={(item._count?.leituras ?? 0) > 0}
+                          title={
+                            (item._count?.leituras ?? 0) > 0
+                              ? "Exclusão bloqueada: há leitura vinculada a esta unidade."
+                              : "Excluir"
+                          }
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </aside>
     </div>
   );

@@ -1,9 +1,33 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { formatarMoeda } from "@/lib/despesas";
 import { MESES, anosReferencia } from "@/lib/leituras";
 import { toTitleCase } from "@/lib/masks";
+import { usePublicarCondominio } from "@/lib/condominio-selecionado";
+
+function formatarNumeroMoeda(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(valor));
+}
+
+function CelulaMoeda({
+  valor,
+  className = "px-3 py-2 text-slate-800",
+}: {
+  valor: number;
+  className?: string;
+}) {
+  return (
+    <td className={className}>
+      <div className="ml-auto flex w-full max-w-[100px] justify-between">
+        <span>R$</span>
+        <span>{formatarNumeroMoeda(valor)}</span>
+      </div>
+    </td>
+  );
+}
 
 type Condominio = {
   id: string;
@@ -20,9 +44,9 @@ type FaturaUnidade = {
   unidade: {
     id: string;
     numero: string;
-    bloco: string;
+    bloco: string | { nome: string };
     nomeMorador: string;
-    tipoUnidade: string;
+    tipoUnidade: { nome: string };
   };
 };
 
@@ -43,6 +67,7 @@ export default function ApuracaoScreen({
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [processando, setProcessando] = useState(false);
+  usePublicarCondominio(condominioId, condominios);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -205,10 +230,10 @@ export default function ApuracaoScreen({
                   <th className="px-3 py-2 font-medium">Bloco</th>
                   <th className="px-3 py-2 font-medium">Unidade</th>
                   <th className="px-3 py-2 font-medium">Morador</th>
-                  <th className="px-3 py-2 text-right font-medium">Valor Água</th>
                   <th className="px-3 py-2 text-right font-medium">
-                    Valor Energia
+                    Txa Mensal
                   </th>
+                  <th className="px-3 py-2 text-right font-medium">Valor Água</th>
                   <th className="px-3 py-2 text-right font-medium">Valor Gás</th>
                   <th className="px-3 py-2 text-right font-medium">Outros</th>
                   <th className="px-3 py-2 text-right font-medium">
@@ -220,31 +245,26 @@ export default function ApuracaoScreen({
                 {faturas.map((item) => (
                   <tr key={item.id} className="border-b border-slate-100">
                     <td className="px-3 py-2 text-slate-700">
-                      {item.unidade.bloco || "—"}
+                      {typeof item.unidade.bloco === "string"
+                        ? item.unidade.bloco || "—"
+                        : item.unidade.bloco.nome}
                     </td>
                     <td className="px-3 py-2 font-medium text-slate-900">
-                      {item.unidade.tipoUnidade} {item.unidade.numero}
+                      {item.unidade.tipoUnidade.nome} {item.unidade.numero}
                     </td>
                     <td className="px-3 py-2 text-slate-700">
                       {item.unidade.nomeMorador
                         ? toTitleCase(item.unidade.nomeMorador)
                         : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right text-slate-800">
-                      {formatarMoeda(item.valorAgua)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-800">
-                      {formatarMoeda(item.valorEnergia)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-800">
-                      {formatarMoeda(item.valorGas)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-slate-800">
-                      {formatarMoeda(item.valorOutras)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium text-slate-900">
-                      {formatarMoeda(item.valorTotal)}
-                    </td>
+                    <CelulaMoeda valor={item.valorEnergia} />
+                    <CelulaMoeda valor={item.valorAgua} />
+                    <CelulaMoeda valor={item.valorGas} />
+                    <CelulaMoeda valor={item.valorOutras} />
+                    <CelulaMoeda
+                      valor={item.valorTotal}
+                      className="px-3 py-2 font-medium text-slate-900"
+                    />
                   </tr>
                 ))}
               </tbody>
@@ -253,21 +273,26 @@ export default function ApuracaoScreen({
                   <td className="px-3 py-2" colSpan={3}>
                     Totais
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    {formatarMoeda(totais.valorAgua)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {formatarMoeda(totais.valorEnergia)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {formatarMoeda(totais.valorGas)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {formatarMoeda(totais.valorOutras)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {formatarMoeda(totais.valorTotal)}
-                  </td>
+                  <CelulaMoeda
+                    valor={totais.valorEnergia}
+                    className="px-3 py-2"
+                  />
+                  <CelulaMoeda
+                    valor={totais.valorAgua}
+                    className="px-3 py-2"
+                  />
+                  <CelulaMoeda
+                    valor={totais.valorGas}
+                    className="px-3 py-2"
+                  />
+                  <CelulaMoeda
+                    valor={totais.valorOutras}
+                    className="px-3 py-2"
+                  />
+                  <CelulaMoeda
+                    valor={totais.valorTotal}
+                    className="px-3 py-2"
+                  />
                 </tr>
               </tfoot>
             </table>
