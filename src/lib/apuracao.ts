@@ -48,24 +48,6 @@ type ValoresUnidade = {
 
 type CampoRateio = keyof ValoresUnidade;
 
-type ConsultasDinamicas = {
-  unidade: {
-    findMany: (args: object) => Promise<UnidadeApuracao[]>;
-  };
-  despesaMensal: {
-    findMany: (args: object) => Promise<DespesaApuracao[]>;
-  };
-  regraParticipacao: {
-    findMany: (args: object) => Promise<RegraParticipacao[]>;
-  };
-  faturaUnidade: {
-    findMany: (args: object) => ReturnType<typeof prisma.faturaUnidade.findMany>;
-    deleteMany: (args: object) => ReturnType<typeof prisma.faturaUnidade.deleteMany>;
-  };
-};
-
-const db = prisma as unknown as ConsultasDinamicas;
-
 export function periodoAnterior(mes: number, ano: number) {
   if (mes === 1) {
     return { mes: 12, ano: ano - 1 };
@@ -248,7 +230,7 @@ export async function listarFaturasApuracao(
   mes: number,
   ano: number,
 ) {
-  return db.faturaUnidade.findMany({
+  return prisma.faturaUnidade.findMany({
     where: {
       mes,
       ano,
@@ -294,7 +276,7 @@ export async function processarApuracao(
     return { error: "Condomínio não encontrado.", status: 404 as const };
   }
 
-  const unidades = await db.unidade.findMany({
+  const unidades = await prisma.unidade.findMany({
     where: { condominioId },
     orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
     select: {
@@ -320,7 +302,7 @@ export async function processarApuracao(
 
   const anterior = periodoAnterior(mes, ano);
 
-  const despesas = await db.despesaMensal.findMany({
+  const despesas = await prisma.despesaMensal.findMany({
     where: { condominioId, mes, ano },
     include: {
       tipoDespesa: {
@@ -332,7 +314,7 @@ export async function processarApuracao(
     },
   });
 
-  const registrosRegras = await db.regraParticipacao.findMany({
+  const registrosRegras = await prisma.regraParticipacao.findMany({
     where: {
       tipoUnidade: { condominioId },
       tipoDespesa: { condominioId },
@@ -465,7 +447,7 @@ export async function processarApuracao(
   );
 
   await prisma.$transaction([
-    db.faturaUnidade.deleteMany({
+    prisma.faturaUnidade.deleteMany({
       where: {
         mes,
         ano,

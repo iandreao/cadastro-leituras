@@ -133,15 +133,15 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
   }
 
   const dados = {
+    condominioId,
+    tipoDespesaId,
+    blocoId: resolvido.blocoId,
     mes,
     ano,
     valorTotal,
     valorFixo,
     valorVariavel,
     formaCobranca,
-    condominio: { connect: { id: condominioId } },
-    tipoDespesa: { connect: { id: tipoDespesaId } },
-    bloco: { connect: { id: resolvido.blocoId } },
   };
 
   try {

@@ -23,18 +23,16 @@ export async function substituirRegrasParticipacao(
     }
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.regraParticipacao.deleteMany({ where: { tipoDespesaId } });
+  await prisma.regraParticipacao.deleteMany({ where: { tipoDespesaId } });
 
-    if (idsUnicos.length > 0) {
-      await tx.regraParticipacao.createMany({
-        data: idsUnicos.map((tipoUnidadeId) => ({
-          tipoUnidadeId,
-          tipoDespesaId,
-        })),
-      });
-    }
-  });
+  if (idsUnicos.length > 0) {
+    await prisma.regraParticipacao.createMany({
+      data: idsUnicos.map((tipoUnidadeId) => ({
+        tipoUnidadeId,
+        tipoDespesaId,
+      })),
+    });
+  }
 
   return { error: null };
 }

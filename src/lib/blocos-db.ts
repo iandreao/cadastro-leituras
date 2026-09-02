@@ -1,16 +1,24 @@
-import type { Bloco } from "@prisma/client";
 import { NOME_BLOCO_PADRAO, persistirBloco } from "@/lib/blocos";
 import { prisma } from "@/lib/prisma";
 
-type BlocoNome = Pick<Bloco, "id" | "nome">;
+type BlocoNome = {
+  id: string;
+  nome: string;
+};
 
 export async function garantirBlocoPadrao(condominioId: string) {
   return prisma.bloco.upsert({
     where: {
-      nome_condominioId: { nome: NOME_BLOCO_PADRAO, condominioId },
+      nome_condominioId: {
+        nome: NOME_BLOCO_PADRAO,
+        condominioId,
+      },
     },
     update: {},
-    create: { nome: NOME_BLOCO_PADRAO, condominioId },
+    create: {
+      nome: NOME_BLOCO_PADRAO,
+      condominioId,
+    },
   });
 }
 
@@ -24,7 +32,10 @@ export async function resolverBlocoDoCondominio(
     return { blocoId: "", error: "Selecione o bloco/torre." };
   }
 
-  const bloco = await prisma.bloco.findUnique({ where: { id } });
+  const bloco = await prisma.bloco.findUnique({
+    where: { id },
+    select: { id: true, condominioId: true },
+  });
 
   if (!bloco || bloco.condominioId !== condominioId) {
     return {
