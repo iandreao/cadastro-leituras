@@ -54,7 +54,9 @@ export default function BlocosScreen({
       return;
     }
 
-    const response = await fetch(`/api/blocos?condominioId=${id}`);
+    const response = await fetch(
+      `/api/blocos?condominioId=${encodeURIComponent(String(id))}`,
+    );
     const lista = (await response.json()) as Bloco[] | { error?: string };
 
     if (!response.ok || !Array.isArray(lista)) {
@@ -71,7 +73,7 @@ export default function BlocosScreen({
   }
 
   async function onCondominioChange(id: string) {
-    setCondominioId(id);
+    setCondominioId(String(id).trim());
     setNome("");
     setEditandoId(null);
     setErro("");
@@ -107,7 +109,7 @@ export default function BlocosScreen({
     setInfo("");
 
     const response = await fetch(
-      `/api/blocos/${item.id}?condominioId=${condominioId}`,
+      `/api/blocos/${item.id}?condominioId=${encodeURIComponent(String(condominioId))}`,
       { method: "DELETE" },
     );
     const data = (await response.json()) as { error?: string };
@@ -135,7 +137,10 @@ export default function BlocosScreen({
       const response = await fetch(url, {
         method: editandoId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, condominioId }),
+        body: JSON.stringify({
+          nome: nome.trim(),
+          condominioId: String(condominioId).trim(),
+        }),
       });
       const data = (await response.json()) as { error?: string };
 
@@ -179,7 +184,7 @@ export default function BlocosScreen({
             >
               <option value="">Selecione</option>
               {condominios.map((item) => (
-                <option key={item.id} value={item.id}>
+                <option key={String(item.id)} value={String(item.id)}>
                   {item.nome}
                 </option>
               ))}

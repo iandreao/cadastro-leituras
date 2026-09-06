@@ -26,10 +26,14 @@ export async function listarBlocosPorCondominio(condominioId: string) {
 }
 
 export async function criarBloco(condominioId: string, nome: string) {
+  const id = String(condominioId).trim();
+
   return prisma.bloco.create({
     data: {
       nome,
-      condominioId,
+      condominio: {
+        connect: { id },
+      },
     },
     include: includeBlocoCadastro,
   });
