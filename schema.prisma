@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -14,6 +15,8 @@ model Usuario {
   senha     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
 model Condominio {
@@ -25,26 +28,62 @@ model Condominio {
   celular         String
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  blocos          Bloco[]
   unidades        Unidade[]
   despesasMensais DespesaMensal[]
+  tiposUnidade    TipoUnidade[]
+  tiposDespesa    TipoDespesa[]
+}
+
+model Bloco {
+  id              String          @id @default(cuid())
+  nome            String
+  condominioId    String
+  condominio      Condominio      @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  unidades        Unidade[]
+  tiposUnidade    TipoUnidade[]
+  tiposDespesa    TipoDespesa[]
+  despesasMensais DespesaMensal[]
+
+  @@unique([nome, condominioId])
+  @@index([condominioId])
+}
+
+model TipoUnidade {
+  id           String              @id @default(cuid())
+  nome         String
+  blocoId      String
+  bloco        Bloco               @relation(fields: [blocoId], references: [id], onDelete: Restrict)
+  condominioId String
+  condominio   Condominio          @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  unidades     Unidade[]
+  regras       RegraParticipacao[]
+
+  @@unique([nome, condominioId, blocoId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model Unidade {
-  id           String     @id @default(cuid())
-  numero       String
-  nomeMorador  String     @default("")
-  celular      String     @default("")
-  tipoUnidade  String     @default("Apartamento")
-  tipoConsumo  String     @default("Água/Gás")
-  bloco        String     @default("")
-  condominioId String
-  condominio   Condominio @relation(fields: [condominioId], references: [id], onDelete: Restrict)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  leituras     Leitura[]
-  faturas      FaturaUnidade[]
+  id            String      @id @default(cuid())
+  numero        String
+  nomeMorador   String      @default("")
+  celular       String      @default("")
+  tipoUnidadeId String
+  tipoUnidade   TipoUnidade @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict)
+  tipoConsumo   String      @default("Água/Gás")
+  blocoId       String
+  bloco         Bloco       @relation(fields: [blocoId], references: [id], onDelete: Restrict)
+  condominioId  String
+  condominio    Condominio  @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  leituras      Leitura[]
+  faturas       FaturaUnidade[]
 
-  @@unique([condominioId, bloco, numero])
+  @@unique([condominioId, blocoId, numero])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model Leitura {
@@ -62,17 +101,29 @@ model Leitura {
 }
 
 model TipoDespesa {
-  id        String          @id @default(cuid())
-  nome      String          @unique
-  despesas  DespesaMensal[]
+  id           String              @id @default(cuid())
+  nome         String
+  blocoId      String
+  bloco        Bloco               @relation(fields: [blocoId], references: [id], onDelete: Restrict)
+  condominioId String
+  condominio   Condominio          @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  despesas     DespesaMensal[]
+  regras       RegraParticipacao[]
+
+  @@unique([nome, condominioId, blocoId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model DespesaMensal {
   id            String      @id @default(cuid())
-  bloco         String      @default("")
+  blocoId       String
+  bloco         Bloco       @relation(fields: [blocoId], references: [id], onDelete: Restrict)
   mes           Int
   ano           Int
   valorTotal    Float
+  valorFixo     Float?
+  valorVariavel Float?
   formaCobranca String
   condominioId  String
   condominio    Condominio  @relation(fields: [condominioId], references: [id], onDelete: Restrict)
@@ -81,7 +132,9 @@ model DespesaMensal {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  @@unique([condominioId, bloco, mes, ano, tipoDespesaId])
+  @@unique([condominioId, blocoId, mes, ano, tipoDespesaId])
+  @@index([condominioId])
+  @@index([blocoId])
 }
 
 model FaturaUnidade {
@@ -99,4 +152,14 @@ model FaturaUnidade {
   updatedAt    DateTime @updatedAt
 
   @@unique([unidadeId, mes, ano])
+}
+
+model RegraParticipacao {
+  id            String      @id @default(cuid())
+  tipoUnidadeId String
+  tipoDespesaId String
+  tipoUnidade   TipoUnidade @relation(fields: [tipoUnidadeId], references: [id], onDelete: Cascade)
+  tipoDespesa   TipoDespesa @relation(fields: [tipoDespesaId], references: [id], onDelete: Cascade)
+
+  @@unique([tipoUnidadeId, tipoDespesaId])
 }
