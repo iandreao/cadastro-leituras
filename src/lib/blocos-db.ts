@@ -25,11 +25,13 @@ export async function listarBlocosPorCondominio(condominioId: string) {
     include: includeBlocoCadastro,
   });
 
-  return blocos.map((bloco) => ({
-    ...bloco,
-    id: String(bloco.id),
-    condominioId: String(bloco.condominioId),
-  }));
+  return blocos
+    .filter((bloco) => Boolean(bloco?.id))
+    .map((bloco) => ({
+      ...bloco,
+      id: String(bloco.id),
+      condominioId: String(bloco.condominioId ?? ""),
+    }));
 }
 
 export async function criarBloco(condominioId: string, nome: string) {
