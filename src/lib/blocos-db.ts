@@ -18,11 +18,18 @@ export const includeBlocoCadastro = {
 } as const;
 
 export async function listarBlocosPorCondominio(condominioId: string) {
-  return prisma.bloco.findMany({
-    where: { condominioId },
+  const id = String(condominioId).trim();
+  const blocos = await prisma.bloco.findMany({
+    where: { condominioId: id },
     orderBy: { nome: "asc" },
     include: includeBlocoCadastro,
   });
+
+  return blocos.map((bloco) => ({
+    ...bloco,
+    id: String(bloco.id),
+    condominioId: String(bloco.condominioId),
+  }));
 }
 
 export async function criarBloco(condominioId: string, nome: string) {

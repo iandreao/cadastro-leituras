@@ -110,7 +110,9 @@ export function usePublicarCondominio(
       return;
     }
 
-    const item = condominios.find((condominio) => condominio.id === condominioId);
+    const item = condominios.find(
+      (condominio) => String(condominio.id) === String(condominioId),
+    );
 
     if (item) {
       publicar({ id: item.id, nome: item.nome });

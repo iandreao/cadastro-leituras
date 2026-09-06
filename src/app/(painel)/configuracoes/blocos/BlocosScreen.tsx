@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import {
   AREA_ROLAVEL,
@@ -43,19 +43,24 @@ export default function BlocosScreen({
   const [salvando, setSalvando] = useState(false);
   usePublicarCondominio(condominioId, condominios);
 
-  const blocosDoCondominio = useMemo(
-    () => blocos.filter((item) => item.condominioId === condominioId),
-    [blocos, condominioId],
-  );
+  function idAtivo(id: unknown) {
+    return String(id ?? "").trim();
+  }
+
+  function mesmoCondominio(bloco: Bloco, id: string) {
+    return idAtivo(bloco.condominioId) === idAtivo(id);
+  }
 
   async function carregar(id = condominioId) {
-    if (!id) {
+    const condominioAtivo = idAtivo(id);
+
+    if (!condominioAtivo) {
       setBlocos([]);
       return;
     }
 
     const response = await fetch(
-      `/api/blocos?condominioId=${encodeURIComponent(String(id))}`,
+      `/api/blocos?condominioId=${encodeURIComponent(condominioAtivo)}`,
     );
     const lista = (await response.json()) as Bloco[] | { error?: string };
 
@@ -69,16 +74,21 @@ export default function BlocosScreen({
       return;
     }
 
-    setBlocos(lista);
+    setBlocos(
+      lista.filter((item) => mesmoCondominio(item, condominioAtivo)),
+    );
   }
 
+  useEffect(() => {
+    void carregar(condominioId);
+  }, [condominioId]);
+
   async function onCondominioChange(id: string) {
-    setCondominioId(String(id).trim());
+    setCondominioId(idAtivo(id));
     setNome("");
     setEditandoId(null);
     setErro("");
     setInfo("");
-    await carregar(id);
   }
 
   function cancelar() {
@@ -152,13 +162,17 @@ export default function BlocosScreen({
       setNome("");
       setEditandoId(null);
       setInfo(editandoId ? "Bloco/torre atualizado." : "Bloco/torre cadastrado.");
-      await carregar();
+      await carregar(idAtivo(condominioId));
     } catch {
       setErro("Falha de conexão. Tente novamente.");
     } finally {
       setSalvando(false);
     }
   }
+
+  const blocosDoCondominio = blocos.filter((item) =>
+    mesmoCondominio(item, condominioId),
+  );
 
   return (
     <div className={GRADE_CADASTRO}>

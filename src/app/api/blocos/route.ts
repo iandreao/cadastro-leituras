@@ -31,7 +31,19 @@ export async function GET(request: Request) {
     );
   }
 
-  const blocos = await listarBlocosPorCondominio(condominioId);
+  const condominio = await prisma.condominio.findUnique({
+    where: { id: condominioId },
+    select: { id: true },
+  });
+
+  if (!condominio) {
+    return NextResponse.json(
+      { error: "Condomínio não encontrado." },
+      { status: 404 },
+    );
+  }
+
+  const blocos = await listarBlocosPorCondominio(condominio.id);
 
   return NextResponse.json(blocos);
 }
