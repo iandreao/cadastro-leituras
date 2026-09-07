@@ -67,6 +67,6 @@ export async function POST(request: Request) {
       token,
     );
   } catch (error) {
-    return responderErroAuth(error, "Não foi possível entrar.");
+    return responderErroAuth(error);
   }
 }
