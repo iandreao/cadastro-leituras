@@ -1,9 +1,14 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { normalizarDatabaseUrl } from "@/lib/neon-url";
 import { getPrisma } from "@/lib/prisma";
 
 export function exigirAmbienteAuth() {
-  if (!process.env.DATABASE_URL?.trim()) {
+  const databaseUrl = process.env.DATABASE_URL
+    ? normalizarDatabaseUrl(process.env.DATABASE_URL)
+    : "";
+
+  if (!databaseUrl) {
     return NextResponse.json(
       {
         error:
