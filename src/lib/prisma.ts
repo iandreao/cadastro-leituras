@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { urlNeonComPoolerESsl } from "@/lib/neon-url";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -11,10 +12,12 @@ export function getPrisma() {
     throw new Error("DATABASE_URL não configurado.");
   }
 
+  const urlNeon = urlNeonComPoolerESsl(url);
+
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = new PrismaClient({
       datasources: {
-        db: { url },
+        db: { url: urlNeon },
       },
     });
   }
