@@ -1,41 +1,47 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
-import {
-  criarBloco,
-  listarBlocosPorCondominio,
-  nomeBlocoDuplicado,
-} from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth";
 import { blocoCadastroSchema } from "@/lib/validations";
 
+const includeBloco = {
+  _count: {
+    select: {
+      unidades: true,
+      tiposUnidade: true,
+      tiposDespesa: true,
+      despesasMensais: true,
+    },
+  },
+} as const;
+
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  try {
+    const condominioId =
+      new URL(request.url).searchParams.get("condominioId")?.trim() ?? "";
 
-  if (error) {
-    return error;
-  }
+    if (!condominioId) {
+      return NextResponse.json(
+        { error: "Selecione o condomínio." },
+        { status: 400 },
+      );
+    }
 
-  const condominioId = new URL(request.url).searchParams.get("condominioId")?.trim();
+    const blocos = await prisma.bloco.findMany({
+      where: { condominioId },
+      orderBy: { nome: "asc" },
+      include: includeBloco,
+    });
 
-  if (!condominioId) {
+    return NextResponse.json(blocos);
+  } catch {
     return NextResponse.json(
-      { error: "Selecione o condomínio." },
-      { status: 400 },
+      { error: "Não foi possível listar os blocos." },
+      { status: 500 },
     );
   }
-
-  const blocos = await listarBlocosPorCondominio(condominioId);
-
-  return NextResponse.json(blocos);
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
-
-  if (error) {
-    return error;
-  }
-
   try {
     const body = await request.json();
     const parsed = blocoCadastroSchema.safeParse(body);
@@ -48,30 +54,32 @@ export async function POST(request: Request) {
     }
 
     const nome = parsed.data.nome.trim();
-    const { condominioId } = parsed.data;
+    const condominioId = String(parsed.data.condominioId).trim();
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: condominioId },
-    });
-
-    if (!condominio) {
-      return NextResponse.json(
-        { error: "Condomínio não encontrado." },
-        { status: 404 },
-      );
+    if (!nome || !condominioId) {
+      return NextResponse.json({ error: "Dados ausentes." }, { status: 400 });
     }
 
-    if (await nomeBlocoDuplicado(condominioId, nome)) {
+    const bloco = await prisma.bloco.create({
+      data: {
+        nome,
+        condominioId,
+      },
+      include: includeBloco,
+    });
+
+    return NextResponse.json(bloco, { status: 201 });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
       return NextResponse.json(
         { error: "Já existe um bloco/torre com este nome neste condomínio." },
         { status: 409 },
       );
     }
 
-    const bloco = await criarBloco(condominioId, nome);
-
-    return NextResponse.json(bloco, { status: 201 });
-  } catch {
     return NextResponse.json(
       { error: "Não foi possível cadastrar o bloco/torre." },
       { status: 500 },

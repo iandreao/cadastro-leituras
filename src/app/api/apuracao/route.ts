@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/auth";
-import { listarFaturasApuracao, processarApuracao } from "@/lib/apuracao";
+import {
+  listarDespesasPeriodo,
+  listarFaturasApuracao,
+  processarApuracao,
+} from "@/lib/apuracao";
 import { apuracaoSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -24,13 +28,20 @@ export async function GET(request: Request) {
     );
   }
 
-  const faturas = await listarFaturasApuracao(
-    parsed.data.condominioId,
-    parsed.data.mes,
-    parsed.data.ano,
-  );
+  const [faturas, despesasPeriodo] = await Promise.all([
+    listarFaturasApuracao(
+      parsed.data.condominioId,
+      parsed.data.mes,
+      parsed.data.ano,
+    ),
+    listarDespesasPeriodo(
+      parsed.data.condominioId,
+      parsed.data.mes,
+      parsed.data.ano,
+    ),
+  ]);
 
-  return NextResponse.json(faturas);
+  return NextResponse.json({ faturas, despesasPeriodo });
 }
 
 export async function POST(request: Request) {
@@ -64,7 +75,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(resultado.faturas);
+    return NextResponse.json({
+      faturas: resultado.faturas,
+      resumo: resultado.resumo,
+      despesasPeriodo: resultado.despesasPeriodo,
+    });
   } catch {
     return NextResponse.json(
       { error: "Não foi possível processar a apuração." },

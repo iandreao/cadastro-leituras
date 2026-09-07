@@ -10,12 +10,7 @@ import {
   parseValorMonetario,
   type FormaCobranca,
 } from "@/lib/despesas";
-import {
-  AREA_ROLAVEL,
-  CARTAO_FORMULARIO,
-  CARTAO_LISTA,
-  GRADE_CADASTRO,
-} from "@/lib/layout-cadastro";
+import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
 import { MESES, anosReferencia, nomeMes } from "@/lib/leituras";
 
 type Condominio = {
@@ -322,8 +317,8 @@ export default function DespesaScreen({
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
-      <section className={CARTAO_FORMULARIO}>
+    <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+      <section className="flex w-full flex-col overflow-visible rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:w-1/3 lg:shrink-0">
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           Incluir Despesas do Mês
         </h2>
@@ -332,7 +327,7 @@ export default function DespesaScreen({
         </p>
 
         <form
-          className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`}
+          className="mt-6 space-y-4 overflow-visible pr-1"
           onSubmit={onSubmit}
         >
           <label className="block">
@@ -431,7 +426,7 @@ export default function DespesaScreen({
             </label>
           </div>
 
-          <label className="block">
+          <label className="relative z-20 block">
             <span className="mb-1.5 block text-lg font-medium text-slate-700">
               Tipo de despesa
             </span>
@@ -439,7 +434,7 @@ export default function DespesaScreen({
               required
               value={tipoDespesaId}
               onChange={(event) => setTipoDespesaId(event.target.value)}
-              className={campoClass}
+              className={`${campoClass} relative z-20`}
             >
               <option value="">Selecione</option>
               {tipos.map((item) => (
@@ -561,7 +556,7 @@ export default function DespesaScreen({
         </form>
       </section>
 
-      <section className={CARTAO_LISTA}>
+      <section className={`${CARTAO_LISTA} lg:flex-1`}>
         <h3 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
           Despesas Cadastradas
         </h3>

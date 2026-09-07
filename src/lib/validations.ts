@@ -111,9 +111,14 @@ export const despesaMensalSchema = z.object({
   formaCobranca: z.enum(FORMAS_COBRANCA),
 });
 
+export const idStringSchema = z
+  .union([z.string(), z.number()])
+  .transform((value) => String(value).trim())
+  .pipe(z.string().min(1, "Selecione o condomínio."));
+
 export const blocoCadastroSchema = z.object({
   nome: z.string().trim().min(2, "Informe o nome do bloco/torre."),
-  condominioId: z.string().min(1, "Selecione o condomínio."),
+  condominioId: idStringSchema,
 });
 
 export const tipoUnidadeSchema = z.object({

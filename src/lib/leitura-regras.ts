@@ -1,6 +1,41 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { indiceReferencia, nomeMes, usaAgua, usaGas } from "@/lib/leituras";
+import {
+  consumoGasInconsistente,
+  consumoM3,
+  indiceReferencia,
+  mensagemConsumoGasInconsistente,
+  mensagemLeituraMenorQueAnterior,
+  nomeMes,
+  rotuloUnidade,
+  usaAgua,
+  usaGas,
+} from "@/lib/leituras";
+
+export async function buscarUltimaLeituraAnterior(input: {
+  unidadeId: string;
+  mes: number;
+  ano: number;
+  tipo?: "agua" | "gas";
+  ignorarId?: string;
+}) {
+  return prisma.leitura.findFirst({
+    where: {
+      unidadeId: input.unidadeId,
+      ...(input.ignorarId ? { id: { not: input.ignorarId } } : {}),
+      OR: [
+        { ano: { lt: input.ano } },
+        { AND: [{ ano: input.ano }, { mes: { lt: input.mes } }] },
+      ],
+      ...(input.tipo === "agua"
+        ? { valorAgua: { not: null } }
+        : input.tipo === "gas"
+          ? { valorGas: { not: null } }
+          : {}),
+    },
+    orderBy: [{ ano: "desc" }, { mes: "desc" }],
+  });
+}
 
 function valorValido(valor: number | null | undefined) {
   return typeof valor === "number" && Number.isFinite(valor) && valor >= 0;
@@ -16,6 +51,14 @@ export async function validarLeituraUnidade(input: {
 }) {
   const unidade = await prisma.unidade.findUnique({
     where: { id: input.unidadeId },
+    include: {
+      tipoUnidade: {
+        select: { nome: true },
+      },
+      bloco: {
+        select: { nome: true },
+      },
+    },
   });
 
   if (!unidade) {
@@ -56,12 +99,11 @@ export async function validarLeituraUnidade(input: {
     };
   }
 
-  const anterior = await prisma.leitura.findFirst({
-    where: {
-      unidadeId: input.unidadeId,
-      ...(input.ignorarId ? { id: { not: input.ignorarId } } : {}),
-    },
-    orderBy: [{ ano: "desc" }, { mes: "desc" }],
+  const anterior = await buscarUltimaLeituraAnterior({
+    unidadeId: input.unidadeId,
+    mes: input.mes,
+    ano: input.ano,
+    ignorarId: input.ignorarId,
   });
 
   if (anterior) {
@@ -78,33 +120,71 @@ export async function validarLeituraUnidade(input: {
         ),
       };
     }
+  }
+
+  const rotulo = rotuloUnidade(unidade);
+
+  if (precisaAgua && valorAgua != null) {
+    const anteriorAgua = await buscarUltimaLeituraAnterior({
+      unidadeId: input.unidadeId,
+      mes: input.mes,
+      ano: input.ano,
+      tipo: "agua",
+      ignorarId: input.ignorarId,
+    });
+    const valorAnteriorAgua = anteriorAgua?.valorAgua;
+
+    if (valorAnteriorAgua != null && valorAgua < valorAnteriorAgua) {
+      return {
+        error: NextResponse.json(
+          {
+            error: mensagemLeituraMenorQueAnterior(
+              rotulo,
+              valorAnteriorAgua,
+              "agua",
+            ),
+          },
+          { status: 400 },
+        ),
+      };
+    }
+  }
+
+  if (precisaGas && valorGas != null) {
+    const anteriorGasRegistro = await buscarUltimaLeituraAnterior({
+      unidadeId: input.unidadeId,
+      mes: input.mes,
+      ano: input.ano,
+      tipo: "gas",
+      ignorarId: input.ignorarId,
+    });
+    const valorAnteriorGas = anteriorGasRegistro?.valorGas ?? 0;
 
     if (
-      precisaAgua &&
-      anterior.valorAgua != null &&
-      valorAgua != null &&
-      valorAgua < anterior.valorAgua
+      anteriorGasRegistro?.valorGas != null &&
+      valorGas < anteriorGasRegistro.valorGas
     ) {
       return {
         error: NextResponse.json(
           {
-            error: `A leitura de água não pode ser menor que a última registrada (${anterior.valorAgua}).`,
+            error: mensagemLeituraMenorQueAnterior(
+              rotulo,
+              anteriorGasRegistro.valorGas,
+              "gas",
+            ),
           },
           { status: 400 },
         ),
       };
     }
 
-    if (
-      precisaGas &&
-      anterior.valorGas != null &&
-      valorGas != null &&
-      valorGas < anterior.valorGas
-    ) {
+    const consumo = consumoM3(valorGas, valorAnteriorGas);
+
+    if (consumoGasInconsistente(consumo)) {
       return {
         error: NextResponse.json(
           {
-            error: `A leitura de gás não pode ser menor que a última registrada (${anterior.valorGas}).`,
+            error: mensagemConsumoGasInconsistente(rotulo, consumo),
           },
           { status: 400 },
         ),

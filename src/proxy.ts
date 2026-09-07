@@ -21,8 +21,9 @@ export async function proxy(request: NextRequest) {
   const autenticado = await hasValidSession(token);
   const isLogin = pathname.startsWith("/login");
   const isAuthApi = pathname.startsWith("/api/auth");
+  const isResetUsuario = pathname.startsWith("/api/reset-usuario");
 
-  if (isAuthApi) {
+  if (isAuthApi || isResetUsuario) {
     return NextResponse.next();
   }
 

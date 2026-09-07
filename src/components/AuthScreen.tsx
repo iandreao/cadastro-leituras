@@ -64,7 +64,7 @@ export default function AuthScreen() {
             Água e Gás
           </p>
           <h1 className="mt-4 max-w-md text-4xl font-semibold leading-tight">
-            Cadastro de Leituras
+            Gestão de Condomínio
           </h1>
           <p className="mt-4 max-w-md text-base leading-7 text-teal-50/80">
             Controle condomínios, unidades e medições em um único fluxo, com
@@ -91,7 +91,7 @@ export default function AuthScreen() {
               Água e Gás
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-              Cadastro de Leituras
+              Gestão de Condomínio
             </h1>
           </div>
 

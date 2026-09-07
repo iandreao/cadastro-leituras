@@ -39,7 +39,7 @@ export default function Sidebar() {
     <aside className="flex w-full shrink-0 flex-col bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
       <div className="border-b border-white/10 px-6 py-6">
         <p className="text-base font-medium tracking-[0.2em] text-teal-200 uppercase">
-          GESTÃO DE CONDOMINIO
+          GESTÃO DE CONDOMÍNIO
         </p>
         <p className="mt-3 truncate text-lg text-teal-100/80">{nomeCondominio}</p>
       </div>

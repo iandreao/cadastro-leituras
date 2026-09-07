@@ -31,9 +31,139 @@ export function nomeMes(mes: number) {
   return MESES.find((item) => item.valor === mes)?.nome ?? String(mes);
 }
 
+export const CASAS_DECIMAIS_LEITURA = 3;
+export const LIMITE_CONSUMO_GAS_M3 = 500;
+const MAX_DIGITOS_INTEIROS_LEITURA = 8;
+
+export function mascararLeitura(value: string) {
+  let inteiro = "";
+  let decimal = "";
+  let separador = "";
+
+  for (const char of value) {
+    if (char >= "0" && char <= "9") {
+      if (!separador) {
+        if (inteiro.length < MAX_DIGITOS_INTEIROS_LEITURA) {
+          inteiro += char;
+        }
+      } else if (decimal.length < CASAS_DECIMAIS_LEITURA) {
+        decimal += char;
+      }
+      continue;
+    }
+
+    if ((char === "," || char === ".") && !separador) {
+      separador = char;
+    }
+  }
+
+  if (!inteiro && !separador) {
+    return "";
+  }
+
+  const parteInteira = inteiro.replace(/^0+(?=\d)/, "") || "0";
+
+  if (!separador) {
+    return parteInteira;
+  }
+
+  return `${parteInteira}${separador}${decimal}`;
+}
+
 export function parseLeitura(value: string) {
-  const numero = Number(value.trim().replace(",", "."));
-  return Number.isFinite(numero) ? numero : Number.NaN;
+  const mascarado = mascararLeitura(value.trim());
+
+  if (!mascarado) {
+    return Number.NaN;
+  }
+
+  const numero = Number(mascarado.replace(",", "."));
+
+  if (!Number.isFinite(numero) || numero < 0) {
+    return Number.NaN;
+  }
+
+  return Number(numero.toFixed(CASAS_DECIMAIS_LEITURA));
+}
+
+export function parseLeituraDigitada(value: string, anterior = 0) {
+  const bruto = value.trim();
+  const numero = parseLeitura(bruto);
+
+  if (Number.isNaN(numero)) {
+    return Number.NaN;
+  }
+
+  if (/[.,]/.test(bruto) || anterior <= 0) {
+    return numero;
+  }
+
+  const candidatos = [numero, numero / 10, numero / 100, numero / 1000]
+    .map((item) => Number(item.toFixed(CASAS_DECIMAIS_LEITURA)))
+    .filter((item) => item >= anterior)
+    .sort((a, b) => Math.abs(a - anterior) - Math.abs(b - anterior));
+
+  return candidatos[0] ?? numero;
+}
+
+export function formatarLeitura(valor: number | string | null | undefined) {
+  if (valor === null || valor === undefined || valor === "") {
+    return "";
+  }
+
+  const numero =
+    typeof valor === "number" ? valor : parseLeitura(String(valor));
+
+  if (!Number.isFinite(numero) || numero < 0) {
+    return "";
+  }
+
+  return Number(numero.toFixed(CASAS_DECIMAIS_LEITURA))
+    .toFixed(CASAS_DECIMAIS_LEITURA)
+    .replace(".", ",");
+}
+
+export function consumoM3(leituraAtual: number, leituraAnterior: number) {
+  return Number((leituraAtual - leituraAnterior).toFixed(CASAS_DECIMAIS_LEITURA));
+}
+
+export function valorLeituraDoTipo(
+  leitura: { valorAgua: number | null; valorGas: number | null },
+  tipo: "agua" | "gas",
+) {
+  return tipo === "agua" ? leitura.valorAgua : leitura.valorGas;
+}
+
+export function leituraMenorQueAnterior(atual: number, anterior: number) {
+  return Number.isFinite(atual) && Number.isFinite(anterior) && atual < anterior;
+}
+
+export function mensagemLeituraMenorQueAnterior(
+  unidade: string,
+  anterior: number,
+  tipo: "agua" | "gas" = "agua",
+) {
+  const tipoLabel = tipo === "agua" ? "água" : "gás";
+  const rotulo = unidade.trim() ? ` da unidade ${unidade}` : "";
+  return `A leitura atual${rotulo} não pode ser menor que a leitura anterior de ${tipoLabel} (${formatarLeitura(anterior)}).`;
+}
+
+export function consumoGasInconsistente(consumo: number) {
+  return Number.isFinite(consumo) && consumo > LIMITE_CONSUMO_GAS_M3;
+}
+
+export function formatarConsumoM3(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: CASAS_DECIMAIS_LEITURA,
+  }).format(valor);
+}
+
+export function mensagemConsumoGasInconsistente(
+  unidade: string,
+  consumo: number,
+) {
+  return `A unidade ${unidade} apresentou um consumo inconsistente de ${formatarConsumoM3(consumo)} m³. Por favor, verifique as leituras digitadas.`;
 }
 
 export function usaAgua(tipoConsumo: string) {

@@ -1,0 +1,4 @@
+{
+  "installCommand": "npm install --no-audit --no-fund && node scripts/prisma-fresh.mjs",
+  "buildCommand": "node scripts/prisma-fresh.mjs && next build"
+}
