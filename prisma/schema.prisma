@@ -16,7 +16,7 @@ model Usuario {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Usuario")
+  @@map("users")
 }
 
 model Condominio {
