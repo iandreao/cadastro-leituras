@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cadastro de Leituras – Água e Gás",
+  title: "Gestão de Condomínio",
   description:
     "Sistema de cadastro de condomínios, unidades e leituras de água e gás.",
 };

@@ -15,8 +15,6 @@ model Usuario {
   senha     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@map("users")
 }
 
 model Condominio {

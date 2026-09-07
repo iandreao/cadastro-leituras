@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "node scripts/prisma-fresh.mjs && next build",
+
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
