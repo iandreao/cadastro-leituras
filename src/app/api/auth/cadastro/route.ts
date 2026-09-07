@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import {
+  exigirAmbienteAuth,
+  repositorioUsuario,
+  responderErroAuth,
+} from "@/lib/auth-api";
 import { applySessionCookie, createSessionToken } from "@/lib/auth";
 import { cadastroSchema } from "@/lib/validations";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
+  const ambiente = exigirAmbienteAuth();
+
+  if (ambiente) {
+    return ambiente;
+  }
+
   try {
     const body = await request.json();
     const parsed = cadastroSchema.safeParse(body);
@@ -18,8 +31,9 @@ export async function POST(request: Request) {
 
     const { nome, email, senha } = parsed.data;
     const emailNormalizado = email.toLowerCase();
+    const usuarios = repositorioUsuario();
 
-    const existente = await prisma.usuario.findUnique({
+    const existente = await usuarios.findUnique({
       where: { email: emailNormalizado },
     });
 
@@ -31,7 +45,7 @@ export async function POST(request: Request) {
     }
 
     const hash = await bcrypt.hash(senha, 10);
-    const usuario = await prisma.usuario.create({
+    const usuario = await usuarios.create({
       data: {
         nome,
         email: emailNormalizado,
@@ -55,10 +69,7 @@ export async function POST(request: Request) {
       }),
       token,
     );
-  } catch {
-    return NextResponse.json(
-      { error: "Não foi possível concluir o cadastro." },
-      { status: 500 },
-    );
+  } catch (error) {
+    return responderErroAuth(error, "Não foi possível concluir o cadastro.");
   }
 }

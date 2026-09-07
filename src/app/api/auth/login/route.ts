@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import {
+  exigirAmbienteAuth,
+  repositorioUsuario,
+  responderErroAuth,
+} from "@/lib/auth-api";
 import { applySessionCookie, createSessionToken } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
+  const ambiente = exigirAmbienteAuth();
+
+  if (ambiente) {
+    return ambiente;
+  }
+
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
@@ -17,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const email = parsed.data.email.toLowerCase();
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await repositorioUsuario().findUnique({
       where: { email },
     });
 
@@ -53,10 +66,7 @@ export async function POST(request: Request) {
       }),
       token,
     );
-  } catch {
-    return NextResponse.json(
-      { error: "Não foi possível entrar." },
-      { status: 500 },
-    );
+  } catch (error) {
+    return responderErroAuth(error, "Não foi possível entrar.");
   }
 }
