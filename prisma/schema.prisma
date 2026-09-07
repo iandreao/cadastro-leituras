@@ -78,8 +78,10 @@ model Unidade {
   condominio    Condominio  @relation(fields: [condominioId], references: [id], onDelete: Restrict)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  leituras      Leitura[]
-  faturas       FaturaUnidade[]
+  leituras       Leitura[]
+  leiturasAgua   LeituraAgua[]
+  leiturasGas    LeituraGas[]
+  faturas        FaturaUnidade[]
 
   @@unique([condominioId, blocoId, numero])
   @@index([condominioId])
@@ -98,6 +100,36 @@ model Leitura {
   updatedAt DateTime @updatedAt
 
   @@unique([unidadeId, mes, ano])
+}
+
+model LeituraAgua {
+  id           String   @id @default(cuid())
+  dataLeitura  DateTime
+  valorLeitura Float
+  unidadeId    String
+  unidade      Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Restrict)
+  mes          Int
+  ano          Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([unidadeId])
+  @@index([unidadeId, dataLeitura])
+}
+
+model LeituraGas {
+  id           String   @id @default(cuid())
+  dataLeitura  DateTime
+  valorLeitura Float
+  unidadeId    String
+  unidade      Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Restrict)
+  mes          Int
+  ano          Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([unidadeId])
+  @@index([unidadeId, dataLeitura])
 }
 
 model TipoDespesa {
