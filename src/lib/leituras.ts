@@ -127,6 +127,27 @@ export function consumoM3(leituraAtual: number, leituraAnterior: number) {
   return Number((leituraAtual - leituraAnterior).toFixed(CASAS_DECIMAIS_LEITURA));
 }
 
+export function valorLeituraDoTipo(
+  leitura: { valorAgua: number | null; valorGas: number | null },
+  tipo: "agua" | "gas",
+) {
+  return tipo === "agua" ? leitura.valorAgua : leitura.valorGas;
+}
+
+export function leituraMenorQueAnterior(atual: number, anterior: number) {
+  return Number.isFinite(atual) && Number.isFinite(anterior) && atual < anterior;
+}
+
+export function mensagemLeituraMenorQueAnterior(
+  unidade: string,
+  anterior: number,
+  tipo: "agua" | "gas" = "agua",
+) {
+  const tipoLabel = tipo === "agua" ? "água" : "gás";
+  const rotulo = unidade.trim() ? ` da unidade ${unidade}` : "";
+  return `A leitura atual${rotulo} não pode ser menor que a leitura anterior de ${tipoLabel} (${formatarLeitura(anterior)}).`;
+}
+
 export function consumoGasInconsistente(consumo: number) {
   return Number.isFinite(consumo) && consumo > LIMITE_CONSUMO_GAS_M3;
 }

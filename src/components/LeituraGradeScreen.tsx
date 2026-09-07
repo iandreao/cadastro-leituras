@@ -9,13 +9,16 @@ import {
   consumoGasInconsistente,
   consumoM3,
   formatarLeitura,
+  leituraMenorQueAnterior,
   mascararLeitura,
   MESES,
   mensagemConsumoGasInconsistente,
+  mensagemLeituraMenorQueAnterior,
   parseLeituraDigitada,
   periodoMenor,
   rotuloUnidade,
   unidadeElegivelPara,
+  valorLeituraDoTipo,
 } from "@/lib/leituras";
 
 type TipoLeituraTela = "agua" | "gas";
@@ -54,15 +57,14 @@ const campoClass =
 const inputTabela =
   "w-full rounded-md border border-slate-300 px-2 py-2 text-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
 
+const inputErro =
+  "w-full rounded-md border border-red-600 bg-red-50 px-2 py-2 text-lg text-red-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20";
+
 const inputBloqueado =
   "w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-2 text-lg text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
 
 const agora = new Date();
 const anos = anosReferencia(agora.getFullYear());
-
-function valorDoTipo(leitura: Leitura, tipo: TipoLeituraTela) {
-  return tipo === "agua" ? leitura.valorAgua : leitura.valorGas;
-}
 
 function leituraAnteriorDaUnidade(
   leituras: Leitura[],
@@ -74,13 +76,13 @@ function leituraAnteriorDaUnidade(
   const anteriores = leituras
     .filter(
       (item) =>
-        item.unidadeId === unidadeId &&
+        String(item.unidadeId) === String(unidadeId) &&
         periodoMenor(item.ano, item.mes, ano, mes) &&
-        valorDoTipo(item, tipo) != null,
+        valorLeituraDoTipo(item, tipo) != null,
     )
     .sort((a, b) => b.ano - a.ano || b.mes - a.mes);
 
-  return anteriores[0] ? (valorDoTipo(anteriores[0], tipo) ?? 0) : 0;
+  return anteriores[0] ? (valorLeituraDoTipo(anteriores[0], tipo) ?? 0) : 0;
 }
 
 function leituraAtualExistente(
@@ -91,10 +93,13 @@ function leituraAtualExistente(
   tipo: TipoLeituraTela,
 ) {
   const atual = leituras.find(
-    (item) => item.unidadeId === unidadeId && item.mes === mes && item.ano === ano,
+    (item) =>
+      String(item.unidadeId) === String(unidadeId) &&
+      item.mes === mes &&
+      item.ano === ano,
   );
 
-  const valor = atual ? valorDoTipo(atual, tipo) : null;
+  const valor = atual ? valorLeituraDoTipo(atual, tipo) : null;
   return valor == null ? "" : formatarLeitura(valor);
 }
 
@@ -113,6 +118,7 @@ export default function LeituraGradeScreen({
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [leituras, setLeituras] = useState<Leitura[]>([]);
   const [atuais, setAtuais] = useState<Record<string, string>>({});
+  const [errosLinha, setErrosLinha] = useState<Record<string, string>>({});
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -127,6 +133,7 @@ export default function LeituraGradeScreen({
       setUnidades([]);
       setLeituras([]);
       setAtuais({});
+      setErrosLinha({});
       return;
     }
 
@@ -173,6 +180,7 @@ export default function LeituraGradeScreen({
         setUnidades(ordenadas);
         setLeituras(listaLeituras);
         setAtuais(preenchidos);
+        setErrosLinha({});
       } catch {
         if (ativo) {
           setErro("Não foi possível carregar as unidades do condomínio.");
@@ -207,28 +215,95 @@ export default function LeituraGradeScreen({
     [unidades, leituras, mesNumero, anoNumero, tipo],
   );
 
-  function atualizarAtual(unidadeId: string, valor: string) {
-    setAtuais((atual) => ({ ...atual, [unidadeId]: mascararLeitura(valor) }));
+  function limparErroLinha(unidadeId: string) {
+    setErrosLinha((atual) => {
+      if (!atual[unidadeId]) {
+        return atual;
+      }
+
+      const proximo = { ...atual };
+      delete proximo[unidadeId];
+      return proximo;
+    });
+  }
+
+  function validarLeituraCampo(
+    unidadeId: string,
+    valorDigitado: string,
+    anterior: number,
+    rotulo: string,
+  ) {
+    const bruto = valorDigitado.trim();
+
+    if (!bruto) {
+      limparErroLinha(unidadeId);
+      return { ok: true, valor: null as number | null };
+    }
+
+    const valor = parseLeituraDigitada(bruto, anterior);
+
+    if (Number.isNaN(valor) || valor < 0) {
+      setErrosLinha((atual) => ({
+        ...atual,
+        [unidadeId]: "Informe uma leitura válida.",
+      }));
+      return { ok: false, valor: null as number | null };
+    }
+
+    if (leituraMenorQueAnterior(valor, anterior)) {
+      const mensagem = mensagemLeituraMenorQueAnterior(rotulo, anterior, tipo);
+      setErrosLinha((atual) => ({ ...atual, [unidadeId]: mensagem }));
+      return { ok: false, valor };
+    }
+
+    limparErroLinha(unidadeId);
+    return { ok: true, valor };
+  }
+
+  function atualizarAtual(
+    unidadeId: string,
+    valor: string,
+    anterior: number,
+    rotulo: string,
+  ) {
+    const mascarado = mascararLeitura(valor);
+    setAtuais((atual) => ({ ...atual, [unidadeId]: mascarado }));
+    validarLeituraCampo(unidadeId, mascarado, anterior, rotulo);
     setErro("");
     setInfo("");
   }
 
-  function confirmarAtual(unidadeId: string, valor: string, anterior: number) {
+  function confirmarAtual(
+    unidadeId: string,
+    valor: string,
+    anterior: number,
+    rotulo: string,
+  ) {
     const bruto = valor.trim();
 
     if (!bruto) {
-      atualizarAtual(unidadeId, "");
+      setAtuais((atual) => ({ ...atual, [unidadeId]: "" }));
+      limparErroLinha(unidadeId);
       return;
     }
 
-    const numero = parseLeituraDigitada(bruto, anterior);
+    const { ok, valor: numero } = validarLeituraCampo(
+      unidadeId,
+      bruto,
+      anterior,
+      rotulo,
+    );
 
-    if (Number.isNaN(numero)) {
-      atualizarAtual(unidadeId, "");
+    if (numero == null || Number.isNaN(numero)) {
+      setAtuais((atual) => ({ ...atual, [unidadeId]: "" }));
       return;
     }
 
-    atualizarAtual(unidadeId, formatarLeitura(numero));
+    setAtuais((atual) => ({ ...atual, [unidadeId]: formatarLeitura(numero) }));
+
+    if (!ok) {
+      setErro(mensagemLeituraMenorQueAnterior(rotulo, anterior, tipo));
+    }
   }
 
   async function onSubmit(event: FormEvent) {
@@ -243,12 +318,14 @@ export default function LeituraGradeScreen({
 
     const inconsistentes: string[] = [];
     const itens: { unidadeId: string; valor: number }[] = [];
+    const errosSubmit: Record<string, string> = {};
 
     for (const linha of linhas) {
       if (!linha.elegivel) {
         continue;
       }
 
+      const rotulo = rotuloUnidade(linha.unidade);
       const bruto = (atuais[linha.unidade.id] ?? "").trim();
 
       if (!bruto) {
@@ -258,12 +335,19 @@ export default function LeituraGradeScreen({
       const valor = parseLeituraDigitada(bruto, linha.anterior);
 
       if (Number.isNaN(valor) || valor < 0) {
-        inconsistentes.push(rotuloUnidade(linha.unidade));
+        errosSubmit[linha.unidade.id] = "Informe uma leitura válida.";
+        inconsistentes.push(rotulo);
         continue;
       }
 
-      if (valor < linha.anterior) {
-        inconsistentes.push(rotuloUnidade(linha.unidade));
+      if (leituraMenorQueAnterior(valor, linha.anterior)) {
+        const mensagem = mensagemLeituraMenorQueAnterior(
+          rotulo,
+          linha.anterior,
+          tipo,
+        );
+        errosSubmit[linha.unidade.id] = mensagem;
+        inconsistentes.push(rotulo);
         continue;
       }
 
@@ -272,10 +356,7 @@ export default function LeituraGradeScreen({
 
         if (consumoGasInconsistente(consumo)) {
           setErro(
-            mensagemConsumoGasInconsistente(
-              rotuloUnidade(linha.unidade),
-              consumo,
-            ),
+            mensagemConsumoGasInconsistente(rotulo, consumo),
           );
           return;
         }
@@ -285,8 +366,11 @@ export default function LeituraGradeScreen({
     }
 
     if (inconsistentes.length > 0) {
+      setErrosLinha((atual) => ({ ...atual, ...errosSubmit }));
       setErro(
-        `A leitura atual não pode ser menor que a anterior na(s) unidade(s): ${inconsistentes.join(", ")}.`,
+        inconsistentes.length === 1
+          ? Object.values(errosSubmit)[0]
+          : `A leitura atual não pode ser menor que a anterior na(s) unidade(s): ${inconsistentes.join(", ")}.`,
       );
       return;
     }
@@ -318,6 +402,7 @@ export default function LeituraGradeScreen({
       }
 
       setInfo(`${itens.length} leitura(s) salvas com sucesso.`);
+      setErrosLinha({});
       const resLeituras = await fetch(`/api/leituras?condominioId=${condominioId}`);
       setLeituras((await resLeituras.json()) as Leitura[]);
     } catch {
@@ -419,16 +504,19 @@ export default function LeituraGradeScreen({
           {!carregando &&
             linhas.map((linha, indice) => {
               const bloqueada = !linha.elegivel;
+              const rotulo = rotuloUnidade(linha.unidade);
+              const erroLinha = errosLinha[linha.unidade.id];
 
               return (
                 <div
                   key={linha.unidade.id}
-                  className={`grid min-h-[60px] grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-b border-slate-200 px-4 py-2 ${
+                  className={`border-b border-slate-200 px-4 py-2 ${
                     indice % 2 === 0 ? "bg-white" : "bg-slate-50"
                   }`}
                 >
+                  <div className="grid min-h-[60px] grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
                   <span className="text-lg font-medium text-slate-800">
-                    {rotuloUnidade(linha.unidade)}
+                    {rotulo}
                   </span>
                   <input
                     type="text"
@@ -446,20 +534,39 @@ export default function LeituraGradeScreen({
                     inputMode="decimal"
                     autoComplete="off"
                     disabled={bloqueada}
+                    aria-invalid={Boolean(erroLinha)}
                     value={bloqueada ? "" : (atuais[linha.unidade.id] ?? "")}
                     onChange={(event) =>
-                      atualizarAtual(linha.unidade.id, event.target.value)
+                      atualizarAtual(
+                        linha.unidade.id,
+                        event.target.value,
+                        linha.anterior,
+                        rotulo,
+                      )
                     }
                     onBlur={(event) =>
                       confirmarAtual(
                         linha.unidade.id,
                         event.target.value,
                         linha.anterior,
+                        rotulo,
                       )
                     }
-                    className={bloqueada ? inputBloqueado : inputTabela}
+                    className={
+                      bloqueada
+                        ? inputBloqueado
+                        : erroLinha
+                          ? inputErro
+                          : inputTabela
+                    }
                     placeholder={bloqueada ? "" : "0,000"}
                   />
+                  </div>
+                  {erroLinha && (
+                    <p className="mt-1 text-base font-medium text-red-700">
+                      {erroLinha}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -480,7 +587,12 @@ export default function LeituraGradeScreen({
       <div className="mt-6 flex justify-center">
         <button
           type="submit"
-          disabled={salvando || !condominioId || carregando}
+          disabled={
+            salvando ||
+            !condominioId ||
+            carregando ||
+            Object.keys(errosLinha).length > 0
+          }
           className="rounded-xl bg-blue-600 px-16 py-3 text-xl font-semibold tracking-wide text-white uppercase hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {salvando ? "Salvando..." : "Salvar"}

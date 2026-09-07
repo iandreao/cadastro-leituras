@@ -11,6 +11,28 @@ export const TIPO_AGUA_FIXO = "Água Condominio";
 export const TIPO_AGUA_VARIAVEL = "Água";
 export const TIPO_GAS = "Gás";
 export const TIPO_TAXA_MENSAL = "Taxa Mensal";
+export const DIVISOR_VALOR_M3_GAS = 20;
+
+export type ClassificacaoDespesaApuracao = "fixa" | "agua" | "gas";
+
+export type DespesaPeriodoApuracao = {
+  nome: string;
+  bloco: string;
+  formaCobranca: string;
+  classificacao: ClassificacaoDespesaApuracao;
+  valorTotal: number;
+};
+
+export type ResumoApuracao = {
+  totalFixo: number;
+  totalAgua: number;
+  totalGas: number;
+  unidades: number;
+  valorM3Agua: number | null;
+  valorM3Gas: number | null;
+  consumoAguaM3: number;
+  consumoGasM3: number;
+};
 
 type TipoUnidadeRelacao = {
   id: string;
@@ -92,6 +114,7 @@ function unidadesParticipantes(
   blocoDespesaId: string,
   tipoDespesaId: string,
   regras: Set<string>,
+  tiposComRegra: Set<string>,
 ) {
   return unidades.filter((unidade) => {
     if (ehUnidadeCondominio(unidade)) {
@@ -100,6 +123,10 @@ function unidadesParticipantes(
 
     if (!unidadeNoEscopo(unidade, blocoDespesaId)) {
       return false;
+    }
+
+    if (!tiposComRegra.has(tipoDespesaId)) {
+      return true;
     }
 
     return participaDoRateio(unidade.tipoUnidadeId, tipoDespesaId, regras);
@@ -150,6 +177,105 @@ function classificarDespesa(nome: string) {
   return "outras" as const;
 }
 
+function classificacaoResumo(
+  tipo: ReturnType<typeof classificarDespesa>,
+): ClassificacaoDespesaApuracao {
+  if (tipo === "gas") {
+    return "gas";
+  }
+
+  if (tipo === "agua_variavel" || tipo === "agua_fixo") {
+    return "agua";
+  }
+
+  return "fixa";
+}
+
+async function carregarConsumosPorUnidade(
+  unidadeIds: string[],
+  mes: number,
+  ano: number,
+) {
+  const agua = new Map<string, number>();
+  const gas = new Map<string, number>();
+
+  if (unidadeIds.length === 0) {
+    return { agua, gas };
+  }
+
+  const anterior = periodoAnterior(mes, ano);
+  const leituras = await prisma.leitura.findMany({
+    where: {
+      unidadeId: { in: unidadeIds },
+      OR: [
+        { mes, ano },
+        { mes: anterior.mes, ano: anterior.ano },
+      ],
+    },
+    select: {
+      unidadeId: true,
+      mes: true,
+      ano: true,
+      valorAgua: true,
+      valorGas: true,
+    },
+  });
+
+  const atualPorUnidade = new Map(
+    leituras
+      .filter((item) => item.mes === mes && item.ano === ano)
+      .map((item) => [item.unidadeId, item]),
+  );
+  const previaPorUnidade = new Map(
+    leituras
+      .filter((item) => item.mes === anterior.mes && item.ano === anterior.ano)
+      .map((item) => [item.unidadeId, item]),
+  );
+
+  for (const unidadeId of unidadeIds) {
+    const atual = atualPorUnidade.get(unidadeId);
+    const previa = previaPorUnidade.get(unidadeId);
+    agua.set(unidadeId, consumoLeitura(atual?.valorAgua, previa?.valorAgua));
+    gas.set(
+      unidadeId,
+      consumoM3(Number(atual?.valorGas ?? 0), Number(previa?.valorGas ?? 0)),
+    );
+  }
+
+  return { agua, gas };
+}
+
+export async function listarDespesasPeriodo(
+  condominioId: string,
+  mes: number,
+  ano: number,
+): Promise<DespesaPeriodoApuracao[]> {
+  const despesas = await prisma.despesaMensal.findMany({
+    where: { condominioId, mes, ano },
+    include: {
+      tipoDespesa: {
+        select: { nome: true },
+      },
+      bloco: {
+        select: { nome: true },
+      },
+    },
+    orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+  });
+
+  return despesas.map((despesa) => {
+    const tipo = classificarDespesa(despesa.tipoDespesa.nome);
+
+    return {
+      nome: despesa.tipoDespesa.nome,
+      bloco: despesa.bloco.nome,
+      formaCobranca: despesa.formaCobranca,
+      classificacao: classificacaoResumo(tipo),
+      valorTotal: Number(despesa.valorTotal),
+    };
+  });
+}
+
 function valoresZerados(): ValoresUnidade {
   return {
     valorAgua: 0,
@@ -189,12 +315,14 @@ function aplicarAguaPorConsumo(
   valorVariavel: number,
   regras: Set<string>,
   tipoDespesaId: string,
+  tiposComRegra: Set<string>,
 ) {
   const participantes = unidadesParticipantes(
     unidades,
     blocoDespesa,
     tipoDespesaId,
     regras,
+    tiposComRegra,
   );
   const comuns = unidades.filter(
     (unidade) =>
@@ -237,7 +365,7 @@ export async function listarFaturasApuracao(
   mes: number,
   ano: number,
 ) {
-  return prisma.faturaUnidade.findMany({
+  const faturas = await prisma.faturaUnidade.findMany({
     where: {
       mes,
       ano,
@@ -269,6 +397,18 @@ export async function listarFaturasApuracao(
       },
     },
   });
+
+  const consumos = await carregarConsumosPorUnidade(
+    faturas.map((fatura) => fatura.unidadeId),
+    mes,
+    ano,
+  );
+
+  return faturas.map((fatura) => ({
+    ...fatura,
+    consumoAguaM3: consumos.agua.get(fatura.unidadeId) ?? 0,
+    consumoGasM3: consumos.gas.get(fatura.unidadeId) ?? 0,
+  }));
 }
 
 export async function processarApuracao(
@@ -328,6 +468,13 @@ export async function processarApuracao(
     },
   });
 
+  if (despesas.length === 0) {
+    return {
+      error: "Não há despesas cadastradas para este condomínio no mês selecionado.",
+      status: 400 as const,
+    };
+  }
+
   const registrosRegras = await prisma.regraParticipacao.findMany({
     where: {
       tipoUnidade: { condominioId },
@@ -342,6 +489,9 @@ export async function processarApuracao(
     registrosRegras.map((regra) =>
       chaveParticipacao(regra.tipoUnidadeId, regra.tipoDespesaId),
     ),
+  );
+  const tiposComRegra = new Set(
+    registrosRegras.map((regra) => regra.tipoDespesaId),
   );
 
   const leituras = await prisma.leitura.findMany({
@@ -374,6 +524,10 @@ export async function processarApuracao(
 
   const consumoAgua = new Map<string, number>();
   const valores = new Map<string, ValoresUnidade>();
+  let valorM3Agua: number | null = null;
+  let valorM3Gas: number | null = null;
+  let consumoAguaResumo = 0;
+  let consumoGasResumo = 0;
 
   for (const unidade of unidades) {
     const atual = leiturasMes.get(unidade.id);
@@ -395,6 +549,7 @@ export async function processarApuracao(
       despesa.blocoId,
       tipoDespesaId,
       regras,
+      tiposComRegra,
     );
 
     if (tipo === "agua_fixo") {
@@ -422,7 +577,21 @@ export async function processarApuracao(
         valorVariavel,
         regras,
         tipoDespesaId,
+        tiposComRegra,
       );
+
+      const comuns = unidades.filter(
+        (unidade) =>
+          unidadeNoEscopo(unidade, despesa.blocoId) &&
+          ehUnidadeCondominio(unidade),
+      );
+      const somaConsumo = [...participantes, ...comuns].reduce(
+        (total, unidade) => total + (consumoAgua.get(unidade.id) ?? 0),
+        0,
+      );
+      consumoAguaResumo += somaConsumo;
+      valorM3Agua =
+        somaConsumo > 0 && valorVariavel > 0 ? valorVariavel / somaConsumo : valorM3Agua;
       continue;
     }
 
@@ -464,8 +633,10 @@ export async function processarApuracao(
           leiturasMesAnterior.get(unidade.id)?.valorGas ?? 0,
         );
         const consumo = consumoM3(leituraAtual, leituraAnterior);
-        const valorM3 = despesaGas / 20;
-        atual.valorGas = consumo * valorM3;
+        const valorM3 = despesaGas / DIVISOR_VALOR_M3_GAS;
+        valorM3Gas = valorM3;
+        consumoGasResumo += consumo;
+        atual.valorGas += consumo * valorM3;
       }
 
       continue;
@@ -531,6 +702,26 @@ export async function processarApuracao(
   ]);
 
   const faturas = await listarFaturasApuracao(condominioId, mes, ano);
+  const despesasPeriodo = await listarDespesasPeriodo(condominioId, mes, ano);
+  const resumo: ResumoApuracao = {
+    totalFixo: arredondarMoeda(
+      faturas.reduce(
+        (total, fatura) => total + Number(fatura.valorEnergia) + Number(fatura.valorOutras),
+        0,
+      ),
+    ),
+    totalAgua: arredondarMoeda(
+      faturas.reduce((total, fatura) => total + Number(fatura.valorAgua), 0),
+    ),
+    totalGas: arredondarMoeda(
+      faturas.reduce((total, fatura) => total + Number(fatura.valorGas), 0),
+    ),
+    unidades: faturas.length,
+    valorM3Agua,
+    valorM3Gas,
+    consumoAguaM3: Number(consumoAguaResumo.toFixed(3)),
+    consumoGasM3: Number(consumoGasResumo.toFixed(3)),
+  };
 
-  return { faturas, despesas: despesas.length };
+  return { faturas, resumo, despesasPeriodo };
 }

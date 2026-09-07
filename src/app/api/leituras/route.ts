@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
-import { validarLeituraUnidade } from "@/lib/leitura-regras";
+import {
+  buscarUltimaLeituraAnterior,
+  validarLeituraUnidade,
+} from "@/lib/leitura-regras";
 import { leituraLoteSchema, leituraSchema } from "@/lib/validations";
 import {
   consumoGasInconsistente,
   consumoM3,
   mensagemConsumoGasInconsistente,
-  periodoMenor,
+  mensagemLeituraMenorQueAnterior,
   rotuloUnidade,
   unidadeElegivelPara,
 } from "@/lib/leituras";
@@ -137,7 +140,6 @@ async function salvarLote(body: unknown) {
   const unidades = await prisma.unidade.findMany({
     where: { condominioId },
     include: {
-      leituras: true,
       tipoUnidade: {
         select: { nome: true },
       },
@@ -174,12 +176,12 @@ async function salvarLote(body: unknown) {
       );
     }
 
-    const anteriores = unidade.leituras
-      .filter((leitura) => periodoMenor(leitura.ano, leitura.mes, ano, mes))
-      .sort((a, b) => b.ano - a.ano || b.mes - a.mes);
-    const anterior = anteriores.find((leitura) =>
-      tipo === "agua" ? leitura.valorAgua != null : leitura.valorGas != null,
-    );
+    const anterior = await buscarUltimaLeituraAnterior({
+      unidadeId: item.unidadeId,
+      mes,
+      ano,
+      tipo,
+    });
     const valorAnterior =
       tipo === "agua"
         ? (anterior?.valorAgua ?? 0)
@@ -188,7 +190,11 @@ async function salvarLote(body: unknown) {
     if (item.valor < valorAnterior) {
       return NextResponse.json(
         {
-          error: `A leitura atual da unidade ${unidade.numero} não pode ser menor que a leitura anterior (${valorAnterior}).`,
+          error: mensagemLeituraMenorQueAnterior(
+            rotuloUnidade(unidade),
+            valorAnterior,
+            tipo,
+          ),
         },
         { status: 400 },
       );
