@@ -70,6 +70,6 @@ export async function POST(request: Request) {
       token,
     );
   } catch (error) {
-    return responderErroAuth(error, "Não foi possível concluir o cadastro.");
+    return responderErroAuth(error);
   }
 }

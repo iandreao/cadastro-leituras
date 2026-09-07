@@ -38,54 +38,30 @@ export function repositorioUsuario() {
   return getPrisma().usuario;
 }
 
-function sanitizarMensagem(error: unknown) {
-  const bruto = error instanceof Error ? error.message : String(error);
-  return bruto.replace(/postgresql:\/\/\S+/gi, "[DATABASE_URL]");
+function sanitizarTexto(valor: string) {
+  return valor.replace(/postgresql:\/\/\S+/gi, "[DATABASE_URL]");
 }
 
-export function responderErroAuth(error: unknown, fallback: string) {
+export function responderErroAuth(error: unknown) {
   console.error("[auth]", error);
-  const detalhe = sanitizarMensagem(error);
 
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2021"
-  ) {
-    return NextResponse.json(
-      { error: "A tabela de usuários não existe neste banco." },
-      { status: 500 },
-    );
-  }
+  const nome = error instanceof Error ? error.name : "Error";
+  const codigo =
+    error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined;
+  const message = sanitizarTexto(
+    error instanceof Error ? error.message : String(error),
+  );
+  const stack = sanitizarTexto(
+    error instanceof Error ? error.stack ?? "" : "",
+  );
 
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    (error.code === "P1001" || error.code === "P1017")
-  ) {
-    return NextResponse.json(
-      { error: "Não foi possível conectar ao banco de dados." },
-      { status: 500 },
-    );
-  }
-
-  if (detalhe.includes("AUTH_SECRET")) {
-    return NextResponse.json(
-      {
-        error:
-          "AUTH_SECRET não está configurado no ambiente Production da Vercel.",
-      },
-      { status: 500 },
-    );
-  }
-
-  if (detalhe.includes("DATABASE_URL")) {
-    return NextResponse.json(
-      {
-        error:
-          "DATABASE_URL não está configurado no ambiente Production da Vercel.",
-      },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({ error: fallback, detalhe }, { status: 500 });
+  return NextResponse.json(
+    {
+      error: message,
+      name: nome,
+      code: codigo,
+      stack,
+    },
+    { status: 500 },
+  );
 }
