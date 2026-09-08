@@ -36,39 +36,43 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex w-full shrink-0 flex-col bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
-      <div className="border-b border-white/10 px-6 py-6">
-        <p className="text-base font-medium tracking-[0.2em] text-teal-200 uppercase">
-          GESTÃO DE CONDOMÍNIO
-        </p>
-        <p className="mt-3 truncate text-lg text-teal-100/80">{nomeCondominio}</p>
+    <aside className="flex h-full w-full shrink-0 flex-col justify-between bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b border-white/10 px-4 py-3">
+          <p className="text-sm font-medium tracking-[0.2em] text-teal-200 uppercase">
+            GESTÃO DE CONDOMÍNIO
+          </p>
+          <p className="mt-1.5 truncate text-sm text-teal-100/80">
+            {nomeCondominio}
+          </p>
+        </div>
+
+        <nav className="flex min-h-0 flex-1 flex-col space-y-1 overflow-y-auto px-3 py-2">
+          {itens.map((item) => {
+            const ativo = pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  ativo
+                    ? "bg-white/15 text-white"
+                    : "text-teal-50/80 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-4">
-        {itens.map((item) => {
-          const ativo = pathname.startsWith(item.href);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-lg px-3 py-2.5 text-lg font-medium transition ${
-                ativo
-                  ? "bg-white/15 text-white"
-                  : "text-teal-50/80 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-4">
+      <div className="shrink-0 px-3 py-2">
         <button
           type="button"
           onClick={sair}
-          className="w-full rounded-lg border border-white/15 px-3 py-2 text-lg font-medium text-teal-50 transition hover:bg-white/10"
+          className="w-full rounded-lg border border-white/15 px-3 py-1.5 text-sm font-medium text-teal-50 transition hover:bg-white/10"
         >
           Sair
         </button>

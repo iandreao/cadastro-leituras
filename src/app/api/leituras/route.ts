@@ -14,6 +14,10 @@ import {
   rotuloUnidade,
   unidadeElegivelPara,
 } from "@/lib/leituras";
+import {
+  respostaSeMovimentoFechado,
+  respostaSePeriodoUnidadeFechado,
+} from "@/lib/movimento";
 
 const includeUnidade = {
   unidade: {
@@ -83,6 +87,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const periodoFechado = await respostaSePeriodoUnidadeFechado(
+      parsed.data.unidadeId,
+      parsed.data.mes,
+      parsed.data.ano,
+    );
+
+    if (periodoFechado) {
+      return periodoFechado;
+    }
+
     const validado = await validarLeituraUnidade(parsed.data);
 
     if (validado.error) {
@@ -137,6 +151,16 @@ async function salvarLote(body: unknown) {
   }
 
   const { condominioId, mes, ano, tipo, itens } = parsed.data;
+  const periodoFechado = await respostaSeMovimentoFechado(
+    condominioId,
+    mes,
+    ano,
+  );
+
+  if (periodoFechado) {
+    return periodoFechado;
+  }
+
   const unidades = await prisma.unidade.findMany({
     where: { condominioId },
     include: {

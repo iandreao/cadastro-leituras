@@ -20,8 +20,11 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const autenticado = await hasValidSession(token);
   const isLogin = pathname.startsWith("/login");
+  const isEsqueceuSenha = pathname.startsWith("/esqueceu-senha");
+  const isRedefinirSenha = pathname.startsWith("/redefinir-senha");
   const isAuthApi = pathname.startsWith("/api/auth");
   const isResetUsuario = pathname.startsWith("/api/reset-usuario");
+  const isPaginaPublica = isLogin || isEsqueceuSenha || isRedefinirSenha;
 
   if (isAuthApi || isResetUsuario) {
     return NextResponse.next();
@@ -31,7 +34,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  if (!autenticado && !isLogin) {
+  if (!autenticado && !isPaginaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

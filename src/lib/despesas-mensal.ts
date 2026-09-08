@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { ehAguaPorConsumo } from "@/lib/despesas";
+import { falhaSeMovimentoFechado } from "@/lib/movimento";
 import { prisma } from "@/lib/prisma";
 import { despesaMensalSchema } from "@/lib/validations";
 
@@ -59,10 +60,26 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
         status: 404,
       } satisfies Falha;
     }
+
+    const bloqueadoAtual = await falhaSeMovimentoFechado(
+      existente.condominioId,
+      existente.mes,
+      existente.ano,
+    );
+
+    if (bloqueadoAtual) {
+      return bloqueadoAtual;
+    }
   }
 
   const { condominioId, tipoDespesaId, blocoId, mes, ano, formaCobranca } =
     parsed.data;
+
+  const bloqueadoNovo = await falhaSeMovimentoFechado(condominioId, mes, ano);
+
+  if (bloqueadoNovo) {
+    return bloqueadoNovo;
+  }
 
   const [condominio, tipoDespesa, resolvido] = await Promise.all([
     prisma.condominio.findUnique({

@@ -19,6 +19,18 @@ model Usuario {
   @@map("users")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
+  @@index([email])
+  @@map("password_reset_tokens")
+}
+
 model Condominio {
   id              String          @id @default(cuid())
   cnpj            String          @unique
@@ -33,6 +45,7 @@ model Condominio {
   despesasMensais DespesaMensal[]
   tiposUnidade    TipoUnidade[]
   tiposDespesa    TipoDespesa[]
+  movimentos      MovimentoMensal[]
 }
 
 model Bloco {
@@ -167,6 +180,20 @@ model DespesaMensal {
   @@unique([condominioId, blocoId, mes, ano, tipoDespesaId])
   @@index([condominioId])
   @@index([blocoId])
+}
+
+model MovimentoMensal {
+  id           String     @id @default(cuid())
+  condominioId String
+  condominio   Condominio @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  mes          Int
+  ano          Int
+  fechado      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([condominioId, mes, ano])
+  @@index([condominioId])
 }
 
 model FaturaUnidade {
