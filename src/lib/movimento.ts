@@ -10,11 +10,18 @@ export type PeriodoFechado = {
 };
 
 export async function listarPeriodosFechados(condominioId: string) {
-  return prisma.movimentoMensal.findMany({
-    where: { condominioId, fechado: true },
-    select: { mes: true, ano: true },
-    orderBy: [{ ano: "desc" }, { mes: "desc" }],
-  });
+  try {
+    const periodos = await prisma.movimentoMensal.findMany({
+      where: { condominioId, fechado: true },
+      select: { mes: true, ano: true },
+      orderBy: [{ ano: "desc" }, { mes: "desc" }],
+    });
+
+    return periodos ?? [];
+  } catch (error) {
+    console.error("[movimento] listarPeriodosFechados", error);
+    return [];
+  }
 }
 
 export async function movimentoEstaFechado(
@@ -63,13 +70,49 @@ export async function definirMovimentoFechado(
   ano: number,
   fechado: boolean,
 ) {
-  return prisma.movimentoMensal.upsert({
-    where: {
-      condominioId_mes_ano: { condominioId, mes, ano },
-    },
-    update: { fechado },
-    create: { condominioId, mes, ano, fechado },
-  });
+  try {
+    const existente = await prisma.movimentoMensal.findFirst({
+      where: { condominioId, mes, ano },
+      select: { id: true },
+    });
+
+    if (existente?.id) {
+      return await prisma.movimentoMensal.update({
+        where: { id: existente.id },
+        data: { fechado },
+      });
+    }
+
+    return await prisma.movimentoMensal.create({
+      data: { condominioId, mes, ano, fechado },
+    });
+  } catch (error) {
+    console.error("[movimento] definirMovimentoFechado", {
+      condominioId,
+      mes,
+      ano,
+      fechado,
+      error,
+    });
+
+    try {
+      return await prisma.movimentoMensal.upsert({
+        where: {
+          condominioId_mes_ano: { condominioId, mes, ano },
+        },
+        update: { fechado },
+        create: { condominioId, mes, ano, fechado },
+      });
+    } catch (fallbackError) {
+      const mensagem =
+        fallbackError instanceof Error && fallbackError.message
+          ? fallbackError.message
+          : error instanceof Error && error.message
+            ? error.message
+            : "Não foi possível gravar o movimento do mês.";
+      throw new Error(mensagem);
+    }
+  }
 }
 
 export async function falhaSeMovimentoFechado(
