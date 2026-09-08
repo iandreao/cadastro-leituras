@@ -251,28 +251,30 @@ export async function listarDespesasPeriodo(
   mes: number,
   ano: number,
 ): Promise<DespesaPeriodoApuracao[]> {
-  const despesas = await prisma.despesaMensal.findMany({
-    where: { condominioId, mes, ano },
-    include: {
-      tipoDespesa: {
-        select: { nome: true },
+  const despesas =
+    (await prisma.despesaMensal.findMany({
+      where: { condominioId, mes, ano },
+      include: {
+        tipoDespesa: {
+          select: { nome: true },
+        },
+        bloco: {
+          select: { nome: true },
+        },
       },
-      bloco: {
-        select: { nome: true },
-      },
-    },
-    orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
-  });
+      orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+    })) ?? [];
 
   return despesas.map((despesa) => {
-    const tipo = classificarDespesa(despesa.tipoDespesa.nome);
+    const nomeTipo = despesa.tipoDespesa?.nome ?? "";
+    const tipo = classificarDespesa(nomeTipo);
 
     return {
-      nome: despesa.tipoDespesa.nome,
-      bloco: despesa.bloco.nome,
-      formaCobranca: despesa.formaCobranca,
+      nome: nomeTipo,
+      bloco: despesa.bloco?.nome ?? "",
+      formaCobranca: despesa.formaCobranca ?? "",
       classificacao: classificacaoResumo(tipo),
-      valorTotal: Number(despesa.valorTotal),
+      valorTotal: Number(despesa.valorTotal ?? 0),
     };
   });
 }
@@ -543,7 +545,7 @@ export async function processarApuracao(
 
   for (const despesa of despesas) {
     const tipoDespesaId = despesa.tipoDespesaId;
-    const tipo = classificarDespesa(despesa.tipoDespesa.nome);
+    const tipo = classificarDespesa(despesa.tipoDespesa?.nome ?? "");
     const valor = Number(despesa.valorTotal);
     const participantes = unidadesParticipantes(
       unidades,
@@ -762,10 +764,11 @@ export async function carregarApuracaoPeriodo(
   ano: number,
 ) {
   const fechado = await movimentoEstaFechado(condominioId, mes, ano);
-  const despesasPeriodo = await listarDespesasPeriodo(condominioId, mes, ano);
+  const despesasPeriodo =
+    (await listarDespesasPeriodo(condominioId, mes, ano)) ?? [];
 
   if (fechado) {
-    const faturas = await listarFaturasApuracao(condominioId, mes, ano);
+    const faturas = (await listarFaturasApuracao(condominioId, mes, ano)) ?? [];
 
     return {
       movimento: { fechado: true as const },
