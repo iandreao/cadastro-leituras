@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 export const MENSAGEM_MES_FECHADO =
   "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
@@ -11,7 +11,7 @@ export type PeriodoFechado = {
 
 export async function listarPeriodosFechados(condominioId: string) {
   try {
-    const periodos = await prisma.movimentoMensal.findMany({
+    const periodos = await getPrisma().movimentoMensal.findMany({
       where: { condominioId, fechado: true },
       select: { mes: true, ano: true },
       orderBy: [{ ano: "desc" }, { mes: "desc" }],
@@ -30,28 +30,7 @@ export async function movimentoEstaFechado(
   ano: number,
 ) {
   try {
-    const repositorio = (
-      prisma as {
-        movimentoMensal?: {
-          findUnique: (args: {
-            where: {
-              condominioId_mes_ano: {
-                condominioId: string;
-                mes: number;
-                ano: number;
-              };
-            };
-            select: { fechado: true };
-          }) => Promise<{ fechado: boolean } | null>;
-        };
-      }
-    ).movimentoMensal;
-
-    if (!repositorio?.findUnique) {
-      return false;
-    }
-
-    const registro = await repositorio.findUnique({
+    const registro = await getPrisma().movimentoMensal.findUnique({
       where: {
         condominioId_mes_ano: { condominioId, mes, ano },
       },
@@ -70,49 +49,23 @@ export async function definirMovimentoFechado(
   ano: number,
   fechado: boolean,
 ) {
-  try {
-    const existente = await prisma.movimentoMensal.findFirst({
-      where: { condominioId, mes, ano },
-      select: { id: true },
-    });
+  const db = getPrisma();
 
-    if (existente?.id) {
-      return await prisma.movimentoMensal.update({
-        where: { id: existente.id },
-        data: { fechado },
-      });
-    }
+  console.log("[movimento] upsert MovimentoMensal", {
+    condominioId,
+    mes,
+    ano,
+    fechado,
+    temDelegate: Boolean(db.movimentoMensal?.upsert),
+  });
 
-    return await prisma.movimentoMensal.create({
-      data: { condominioId, mes, ano, fechado },
-    });
-  } catch (error) {
-    console.error("[movimento] definirMovimentoFechado", {
-      condominioId,
-      mes,
-      ano,
-      fechado,
-      error,
-    });
-
-    try {
-      return await prisma.movimentoMensal.upsert({
-        where: {
-          condominioId_mes_ano: { condominioId, mes, ano },
-        },
-        update: { fechado },
-        create: { condominioId, mes, ano, fechado },
-      });
-    } catch (fallbackError) {
-      const mensagem =
-        fallbackError instanceof Error && fallbackError.message
-          ? fallbackError.message
-          : error instanceof Error && error.message
-            ? error.message
-            : "Não foi possível gravar o movimento do mês.";
-      throw new Error(mensagem);
-    }
-  }
+  return db.movimentoMensal.upsert({
+    where: {
+      condominioId_mes_ano: { condominioId, mes, ano },
+    },
+    update: { fechado },
+    create: { condominioId, mes, ano, fechado },
+  });
 }
 
 export async function falhaSeMovimentoFechado(
@@ -150,7 +103,7 @@ export async function respostaSePeriodoUnidadeFechado(
   mes: number,
   ano: number,
 ) {
-  const unidade = await prisma.unidade.findUnique({
+  const unidade = await getPrisma().unidade.findUnique({
     where: { id: unidadeId },
     select: { condominioId: true },
   });

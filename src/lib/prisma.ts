@@ -24,7 +24,11 @@ export function getPrisma() {
     });
   }
 
-  return globalForPrisma.prisma;
+  const client = globalForPrisma.prisma;
+  // Acesso estático: o bundle da Vercel precisa enxergar este model.
+  void client.movimentoMensal;
+
+  return client;
 }
 
 export const prisma = new Proxy({} as PrismaClient, {
