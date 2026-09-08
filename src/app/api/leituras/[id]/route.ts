@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { leituraSchema } from "@/lib/validations";
 import { validarLeituraUnidade } from "@/lib/leitura-regras";
+import { respostaSePeriodoUnidadeFechado } from "@/lib/movimento";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -55,6 +56,26 @@ export async function PUT(request: Request, context: RouteContext) {
         { error: "Leitura não encontrada." },
         { status: 404 },
       );
+    }
+
+    const bloqueadoAtual = await respostaSePeriodoUnidadeFechado(
+      atual.unidadeId,
+      atual.mes,
+      atual.ano,
+    );
+
+    if (bloqueadoAtual) {
+      return bloqueadoAtual;
+    }
+
+    const bloqueadoNovo = await respostaSePeriodoUnidadeFechado(
+      parsed.data.unidadeId,
+      parsed.data.mes,
+      parsed.data.ano,
+    );
+
+    if (bloqueadoNovo) {
+      return bloqueadoNovo;
     }
 
     const validado = await validarLeituraUnidade({
@@ -119,6 +140,16 @@ export async function DELETE(request: Request, context: RouteContext) {
       { error: "Leitura não encontrada." },
       { status: 404 },
     );
+  }
+
+  const bloqueado = await respostaSePeriodoUnidadeFechado(
+    leitura.unidadeId,
+    leitura.mes,
+    leitura.ano,
+  );
+
+  if (bloqueado) {
+    return bloqueado;
   }
 
   await prisma.leitura.delete({ where: { id } });

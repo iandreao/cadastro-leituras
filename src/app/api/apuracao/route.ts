@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/auth";
 import {
-  listarDespesasPeriodo,
-  listarFaturasApuracao,
+  carregarApuracaoPeriodo,
   processarApuracao,
 } from "@/lib/apuracao";
+import { movimentoEstaFechado } from "@/lib/movimento";
 import { apuracaoSchema } from "@/lib/validations";
 
 export async function GET(request: Request) {
@@ -28,20 +28,39 @@ export async function GET(request: Request) {
     );
   }
 
-  const [faturas, despesasPeriodo] = await Promise.all([
-    listarFaturasApuracao(
+  try {
+    const resultado = await carregarApuracaoPeriodo(
       parsed.data.condominioId,
       parsed.data.mes,
       parsed.data.ano,
-    ),
-    listarDespesasPeriodo(
-      parsed.data.condominioId,
-      parsed.data.mes,
-      parsed.data.ano,
-    ),
-  ]);
+    );
 
-  return NextResponse.json({ faturas, despesasPeriodo });
+    if ("status" in resultado && resultado.status === 404) {
+      return NextResponse.json(
+        {
+          error: resultado.error,
+          movimento: resultado.movimento,
+          faturas: resultado.faturas,
+          despesasPeriodo: resultado.despesasPeriodo,
+          resumo: resultado.resumo,
+        },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      movimento: resultado.movimento,
+      faturas: resultado.faturas,
+      despesasPeriodo: resultado.despesasPeriodo,
+      resumo: resultado.resumo,
+      error: "error" in resultado ? resultado.error : undefined,
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Não foi possível carregar a apuração do período." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -62,6 +81,22 @@ export async function POST(request: Request) {
       );
     }
 
+    if (
+      await movimentoEstaFechado(
+        parsed.data.condominioId,
+        parsed.data.mes,
+        parsed.data.ano,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "O movimento deste mês está fechado. Reabra o movimento para recalcular a apuração.",
+        },
+        { status: 409 },
+      );
+    }
+
     const resultado = await processarApuracao(
       parsed.data.condominioId,
       parsed.data.mes,
@@ -76,6 +111,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
+      movimento: { fechado: false },
       faturas: resultado.faturas,
       resumo: resultado.resumo,
       despesasPeriodo: resultado.despesasPeriodo,

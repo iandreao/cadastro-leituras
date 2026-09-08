@@ -123,6 +123,7 @@ export default function LeituraGradeScreen({
   const [info, setInfo] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [movimentoFechado, setMovimentoFechado] = useState(false);
   usePublicarCondominio(condominioId, condominios);
 
   const mesNumero = Number(mes);
@@ -134,6 +135,7 @@ export default function LeituraGradeScreen({
       setLeituras([]);
       setAtuais({});
       setErrosLinha({});
+      setMovimentoFechado(false);
       return;
     }
 
@@ -145,12 +147,16 @@ export default function LeituraGradeScreen({
       setInfo("");
 
       try {
-        const [resUnidades, resLeituras] = await Promise.all([
+        const [resUnidades, resLeituras, resMovimento] = await Promise.all([
           fetch(`/api/unidades?condominioId=${condominioId}`),
           fetch(`/api/leituras?condominioId=${condominioId}`),
+          fetch(
+            `/api/movimento?condominioId=${condominioId}&mes=${mesNumero}&ano=${anoNumero}`,
+          ),
         ]);
         const listaUnidades = (await resUnidades.json()) as Unidade[];
         const listaLeituras = (await resLeituras.json()) as Leitura[];
+        const movimento = (await resMovimento.json()) as { fechado?: boolean };
 
         if (!ativo) {
           return;
@@ -181,6 +187,7 @@ export default function LeituraGradeScreen({
         setLeituras(listaLeituras);
         setAtuais(preenchidos);
         setErrosLinha({});
+        setMovimentoFechado(Boolean(movimento.fechado));
       } catch {
         if (ativo) {
           setErro("Não foi possível carregar as unidades do condomínio.");
@@ -313,6 +320,13 @@ export default function LeituraGradeScreen({
 
     if (!condominioId) {
       setErro("Selecione o condomínio.");
+      return;
+    }
+
+    if (movimentoFechado) {
+      setErro(
+        "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.",
+      );
       return;
     }
 
@@ -503,7 +517,8 @@ export default function LeituraGradeScreen({
           )}
           {!carregando &&
             linhas.map((linha, indice) => {
-              const bloqueada = !linha.elegivel;
+              const inelegivel = !linha.elegivel;
+              const somenteLeitura = inelegivel || movimentoFechado;
               const rotulo = rotuloUnidade(linha.unidade);
               const erroLinha = errosLinha[linha.unidade.id];
 
@@ -525,17 +540,17 @@ export default function LeituraGradeScreen({
                     readOnly
                     disabled
                     value={
-                      bloqueada ? "" : formatarLeitura(linha.anterior)
+                      inelegivel ? "" : formatarLeitura(linha.anterior)
                     }
-                    className={bloqueada ? inputBloqueado : inputTabela}
+                    className={inelegivel ? inputBloqueado : inputTabela}
                   />
                   <input
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
-                    disabled={bloqueada}
+                    disabled={somenteLeitura}
                     aria-invalid={Boolean(erroLinha)}
-                    value={bloqueada ? "" : (atuais[linha.unidade.id] ?? "")}
+                    value={inelegivel ? "" : (atuais[linha.unidade.id] ?? "")}
                     onChange={(event) =>
                       atualizarAtual(
                         linha.unidade.id,
@@ -553,13 +568,13 @@ export default function LeituraGradeScreen({
                       )
                     }
                     className={
-                      bloqueada
+                      somenteLeitura
                         ? inputBloqueado
                         : erroLinha
                           ? inputErro
                           : inputTabela
                     }
-                    placeholder={bloqueada ? "" : "0,000"}
+                    placeholder={inelegivel ? "" : "0,000"}
                   />
                   </div>
                   {erroLinha && (
@@ -573,6 +588,12 @@ export default function LeituraGradeScreen({
         </div>
       </div>
 
+      {movimentoFechado && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-lg text-amber-800">
+          O movimento deste mês está fechado. Reabra o movimento na tela de
+          Apuração para alterar lançamentos.
+        </p>
+      )}
       {erro && (
         <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-lg text-red-700">
           {erro}
@@ -591,6 +612,7 @@ export default function LeituraGradeScreen({
             salvando ||
             !condominioId ||
             carregando ||
+            movimentoFechado ||
             Object.keys(errosLinha).length > 0
           }
           className="rounded-xl bg-blue-600 px-16 py-3 text-xl font-semibold tracking-wide text-white uppercase hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"

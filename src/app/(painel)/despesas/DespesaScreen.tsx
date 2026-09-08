@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { nomeBloco, queryEscopoTipo } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import {
@@ -54,6 +54,17 @@ type DespesaMensal = {
 const campoClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
+const MENSAGEM_MES_FECHADO =
+  "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
+
+function periodoNaLista(
+  fechados: { mes: number; ano: number }[],
+  mes: number,
+  ano: number,
+) {
+  return fechados.some((item) => item.mes === mes && item.ano === ano);
+}
+
 export default function DespesaScreen({
   condominiosIniciais,
   tiposIniciais,
@@ -82,7 +93,47 @@ export default function DespesaScreen({
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [periodosFechados, setPeriodosFechados] = useState<
+    { mes: number; ano: number }[]
+  >([]);
   usePublicarCondominio(condominioId, condominios);
+
+  const periodoFormularioFechado =
+    mes !== "" &&
+    ano !== "" &&
+    periodoNaLista(periodosFechados, mes, ano);
+
+  useEffect(() => {
+    if (!condominioId) {
+      setPeriodosFechados([]);
+      return;
+    }
+
+    let ativo = true;
+
+    async function carregarMovimento() {
+      try {
+        const response = await fetch(`/api/movimento?condominioId=${condominioId}`);
+        const data = (await response.json()) as {
+          fechados?: { mes: number; ano: number }[];
+        };
+
+        if (ativo) {
+          setPeriodosFechados(data.fechados ?? []);
+        }
+      } catch {
+        if (ativo) {
+          setPeriodosFechados([]);
+        }
+      }
+    }
+
+    void carregarMovimento();
+
+    return () => {
+      ativo = false;
+    };
+  }, [condominioId]);
 
   const blocosDoCondominio = useMemo(
     () =>
@@ -202,6 +253,11 @@ export default function DespesaScreen({
   }
 
   async function alterar(item: DespesaMensal) {
+    if (periodoNaLista(periodosFechados, item.mes, item.ano)) {
+      setErro(MENSAGEM_MES_FECHADO);
+      return;
+    }
+
     setErro("");
     setInfo("");
     setEditandoId(item.id);
@@ -238,6 +294,11 @@ export default function DespesaScreen({
     event.preventDefault();
     setErro("");
     setInfo("");
+
+    if (periodoFormularioFechado) {
+      setErro(MENSAGEM_MES_FECHADO);
+      return;
+    }
     setSalvando(true);
 
     try {
@@ -293,6 +354,11 @@ export default function DespesaScreen({
   }
 
   async function excluir(item: DespesaMensal) {
+    if (periodoNaLista(periodosFechados, item.mes, item.ano)) {
+      setErro(MENSAGEM_MES_FECHADO);
+      return;
+    }
+
     if (!confirm("Excluir esta despesa?")) {
       return;
     }
@@ -522,6 +588,12 @@ export default function DespesaScreen({
             </label>
           )}
 
+          {periodoFormularioFechado && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-lg text-amber-800">
+              {MENSAGEM_MES_FECHADO}
+            </p>
+          )}
+
           {info && (
             <p className="rounded-lg bg-teal-50 px-3 py-2 text-lg text-teal-800">
               {info}
@@ -536,8 +608,8 @@ export default function DespesaScreen({
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={salvando}
-              className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
+              disabled={salvando || periodoFormularioFechado}
+              className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {salvando
                 ? "Salvando..."
@@ -592,7 +664,14 @@ export default function DespesaScreen({
                 </tr>
               </thead>
               <tbody>
-                {despesasVisiveis.map((item) => (
+                {despesasVisiveis.map((item) => {
+                  const itemFechado = periodoNaLista(
+                    periodosFechados,
+                    item.mes,
+                    item.ano,
+                  );
+
+                  return (
                   <tr
                     key={item.id}
                     className={
@@ -615,22 +694,25 @@ export default function DespesaScreen({
                       <div className="flex items-center justify-center gap-2 py-1.5">
                         <button
                           type="button"
+                          disabled={itemFechado}
                           onClick={() => void alterar(item)}
-                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           Alterar
                         </button>
                         <button
                           type="button"
+                          disabled={itemFechado}
                           onClick={() => void excluir(item)}
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700"
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           Excluir
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

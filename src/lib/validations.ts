@@ -19,6 +19,21 @@ export const loginSchema = z.object({
   senha: z.string().min(1, "Informe a senha."),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.email("Informe um e-mail válido."),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Link de redefinição inválido."),
+    senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
+    confirmarSenha: z.string().min(6, "Confirme a nova senha."),
+  })
+  .refine((data) => data.senha === data.confirmarSenha, {
+    message: "As senhas não coincidem.",
+    path: ["confirmarSenha"],
+  });
+
 export const condominioSchema = z.object({
   cnpj: z
     .string()
@@ -138,4 +153,8 @@ export const apuracaoSchema = z.object({
   condominioId: z.string().min(1, "Selecione o condomínio."),
   mes: z.coerce.number().int().min(1).max(12),
   ano: z.coerce.number().int().min(2000).max(2100),
+});
+
+export const movimentoSchema = apuracaoSchema.extend({
+  fechado: z.boolean(),
 });

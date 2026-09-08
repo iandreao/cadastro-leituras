@@ -5,6 +5,7 @@ import {
   mensagemConsumoGasInconsistente,
   rotuloUnidade,
 } from "@/lib/leituras";
+import { movimentoEstaFechado } from "@/lib/movimento";
 
 export const TIPO_UNIDADE_CONDOMINIO = "Condomínio";
 export const TIPO_AGUA_FIXO = "Água Condominio";
@@ -703,10 +704,29 @@ export async function processarApuracao(
 
   const faturas = await listarFaturasApuracao(condominioId, mes, ano);
   const despesasPeriodo = await listarDespesasPeriodo(condominioId, mes, ano);
-  const resumo: ResumoApuracao = {
+  const resumo: ResumoApuracao = montarResumoDeFaturas(
+    faturas,
+    valorM3Agua,
+    valorM3Gas,
+    consumoAguaResumo,
+    consumoGasResumo,
+  );
+
+  return { faturas, resumo, despesasPeriodo };
+}
+
+export function montarResumoDeFaturas(
+  faturas: Awaited<ReturnType<typeof listarFaturasApuracao>>,
+  valorM3Agua: number | null = null,
+  valorM3Gas: number | null = null,
+  consumoAguaM3?: number,
+  consumoGasM3?: number,
+): ResumoApuracao {
+  return {
     totalFixo: arredondarMoeda(
       faturas.reduce(
-        (total, fatura) => total + Number(fatura.valorEnergia) + Number(fatura.valorOutras),
+        (total, fatura) =>
+          total + Number(fatura.valorEnergia) + Number(fatura.valorOutras),
         0,
       ),
     ),
@@ -719,9 +739,59 @@ export async function processarApuracao(
     unidades: faturas.length,
     valorM3Agua,
     valorM3Gas,
-    consumoAguaM3: Number(consumoAguaResumo.toFixed(3)),
-    consumoGasM3: Number(consumoGasResumo.toFixed(3)),
+    consumoAguaM3:
+      consumoAguaM3 ??
+      Number(
+        faturas
+          .reduce((total, fatura) => total + Number(fatura.consumoAguaM3 ?? 0), 0)
+          .toFixed(3),
+      ),
+    consumoGasM3:
+      consumoGasM3 ??
+      Number(
+        faturas
+          .reduce((total, fatura) => total + Number(fatura.consumoGasM3 ?? 0), 0)
+          .toFixed(3),
+      ),
   };
+}
 
-  return { faturas, resumo, despesasPeriodo };
+export async function carregarApuracaoPeriodo(
+  condominioId: string,
+  mes: number,
+  ano: number,
+) {
+  const fechado = await movimentoEstaFechado(condominioId, mes, ano);
+  const despesasPeriodo = await listarDespesasPeriodo(condominioId, mes, ano);
+
+  if (fechado) {
+    const faturas = await listarFaturasApuracao(condominioId, mes, ano);
+
+    return {
+      movimento: { fechado: true as const },
+      faturas,
+      despesasPeriodo,
+      resumo: faturas.length > 0 ? montarResumoDeFaturas(faturas) : null,
+    };
+  }
+
+  const resultado = await processarApuracao(condominioId, mes, ano);
+
+  if ("error" in resultado) {
+    return {
+      movimento: { fechado: false as const },
+      faturas: [] as Awaited<ReturnType<typeof listarFaturasApuracao>>,
+      despesasPeriodo,
+      resumo: null,
+      error: resultado.error,
+      status: resultado.status,
+    };
+  }
+
+  return {
+    movimento: { fechado: false as const },
+    faturas: resultado.faturas,
+    resumo: resultado.resumo,
+    despesasPeriodo: resultado.despesasPeriodo,
+  };
 }

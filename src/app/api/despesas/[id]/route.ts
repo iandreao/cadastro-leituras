@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { persistirDespesaMensal } from "@/lib/despesas-mensal";
+import { respostaSeMovimentoFechado } from "@/lib/movimento";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 
@@ -52,6 +53,16 @@ export async function DELETE(request: Request, context: RouteContext) {
       { error: "Despesa não encontrada." },
       { status: 404 },
     );
+  }
+
+  const bloqueado = await respostaSeMovimentoFechado(
+    despesa.condominioId,
+    despesa.mes,
+    despesa.ano,
+  );
+
+  if (bloqueado) {
+    return bloqueado;
   }
 
   await prisma.despesaMensal.delete({ where: { id } });

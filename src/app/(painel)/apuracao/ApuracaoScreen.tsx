@@ -1,14 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   dispararWhatsApp,
   linkWhatsAppCobranca,
   montarMensagemCobranca,
 } from "@/lib/cobranca-whatsapp";
 import { NOME_BLOCO_PADRAO } from "@/lib/blocos";
-import { formatarMoeda, rotuloFormaCobranca } from "@/lib/despesas";
-import { MESES, anosReferencia, formatarConsumoM3 } from "@/lib/leituras";
+import { rotuloFormaCobranca } from "@/lib/despesas";
+import { MESES, anosReferencia } from "@/lib/leituras";
 import { toTitleCase } from "@/lib/masks";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 
@@ -41,24 +41,31 @@ function ehLinhaCondominio(item: FaturaUnidade) {
   );
 }
 
-function CelulaMoeda({
+function ValorContabil({
   valor,
-  detalhe,
-  className = "min-w-[120px] px-4 py-1.5 text-sm text-slate-800",
+  className = "",
 }: {
   valor: number;
-  detalhe?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`flex w-24 justify-between ${className}`.trim()}>
+      <span className="text-gray-400">R$</span>
+      <span className="font-mono">{formatarNumeroMoeda(valor)}</span>
+    </div>
+  );
+}
+
+function CelulaMoeda({
+  valor,
+  className = "w-28 max-w-[120px] px-2 py-1 text-base text-slate-800",
+}: {
+  valor: number;
   className?: string;
 }) {
   return (
     <td className={className}>
-      <div className="flex w-full justify-between font-mono">
-        <span>R$</span>
-        <span>{formatarNumeroMoeda(valor)}</span>
-      </div>
-      {detalhe ? (
-        <p className="mt-0.5 text-right text-xs text-slate-500">{detalhe}</p>
-      ) : null}
+      <ValorContabil valor={valor} className="ml-auto" />
     </td>
   );
 }
@@ -97,40 +104,143 @@ type DespesaPeriodo = {
   valorTotal: number;
 };
 
-type ResumoApuracao = {
-  totalFixo: number;
-  totalAgua: number;
-  totalGas: number;
-  unidades: number;
-  valorM3Agua: number | null;
-  valorM3Gas: number | null;
-  consumoAguaM3: number;
-  consumoGasM3: number;
-};
-
 type RespostaApuracao = {
   error?: string;
   faturas?: FaturaUnidade[];
-  resumo?: ResumoApuracao | null;
   despesasPeriodo?: DespesaPeriodo[];
+  movimento?: { fechado?: boolean };
 };
 
 function lerResposta(data: RespostaApuracao | FaturaUnidade[]) {
   if (Array.isArray(data)) {
-    return { faturas: data, resumo: null, despesasPeriodo: [] as DespesaPeriodo[] };
+    return {
+      faturas: data,
+      despesasPeriodo: [] as DespesaPeriodo[],
+      fechado: false,
+    };
   }
 
   return {
     faturas: data.faturas ?? [],
-    resumo: data.resumo ?? null,
     despesasPeriodo: data.despesasPeriodo ?? [],
+    fechado: Boolean(data.movimento?.fechado),
   };
 }
 
 const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+  "block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+
+const rotuloFiltro = "mb-1 block text-sm font-medium text-slate-700";
 
 const agora = new Date();
+
+function ApuracaoFiltros({
+  condominioId,
+  mes,
+  ano,
+  condominios,
+  movimentoFechado,
+  salvandoMovimento,
+  carregandoPeriodo,
+  onCondominio,
+  onMes,
+  onAno,
+  onFechar,
+  onReabrir,
+}: {
+  condominioId: string;
+  mes: number;
+  ano: number;
+  condominios: Condominio[];
+  movimentoFechado: boolean;
+  salvandoMovimento: boolean;
+  carregandoPeriodo: boolean;
+  onCondominio: (valor: string) => void;
+  onMes: (valor: number) => void;
+  onAno: (valor: number) => void;
+  onFechar: () => void;
+  onReabrir: () => void;
+}) {
+  return (
+    <div className="flex w-full max-w-full flex-col gap-4 lg:flex-row lg:items-end">
+      <label htmlFor="apuracao-condominio" className="block w-full min-w-0 lg:flex-1">
+        <span className={rotuloFiltro}>Condomínio</span>
+        <select
+          id="apuracao-condominio"
+          required
+          value={condominioId}
+          onChange={(event) => onCondominio(event.target.value)}
+          className={campoClass}
+        >
+          <option value="">Selecione</option>
+          {condominios.map((item) => (
+            <option key={item.id} value={item.id}>
+              {toTitleCase(item.nome)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:shrink-0 lg:gap-4">
+        <label htmlFor="apuracao-mes" className="block min-w-0 w-full lg:w-48">
+          <span className={rotuloFiltro}>Mês</span>
+          <select
+            id="apuracao-mes"
+            required
+            value={mes}
+            onChange={(event) => onMes(Number(event.target.value))}
+            className={campoClass}
+          >
+            {MESES.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label htmlFor="apuracao-ano" className="block min-w-0 w-full lg:w-32">
+          <span className={rotuloFiltro}>Ano</span>
+          <select
+            id="apuracao-ano"
+            required
+            value={ano}
+            onChange={(event) => onAno(Number(event.target.value))}
+            className={campoClass}
+          >
+            {anosReferencia().map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {condominioId ? (
+        movimentoFechado ? (
+          <button
+            type="button"
+            disabled={salvandoMovimento || carregandoPeriodo}
+            onClick={onReabrir}
+            className="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
+          >
+            {salvandoMovimento ? "Reabrindo..." : "Reabrir Movimento"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={salvandoMovimento || carregandoPeriodo}
+            onClick={onFechar}
+            className="w-full rounded-lg bg-[#0b3b4a] px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-[#0e4d61] disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
+          >
+            {salvandoMovimento ? "Fechando..." : "Fechar Movimento"}
+          </button>
+        )
+      ) : null}
+    </div>
+  );
+}
 
 export default function ApuracaoScreen({
   condominios,
@@ -142,18 +252,18 @@ export default function ApuracaoScreen({
   const [ano, setAno] = useState(agora.getFullYear());
   const [faturas, setFaturas] = useState<FaturaUnidade[]>([]);
   const [despesasPeriodo, setDespesasPeriodo] = useState<DespesaPeriodo[]>([]);
-  const [resumo, setResumo] = useState<ResumoApuracao | null>(null);
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
-  const [processando, setProcessando] = useState(false);
   const [carregandoPeriodo, setCarregandoPeriodo] = useState(false);
+  const [movimentoFechado, setMovimentoFechado] = useState(false);
+  const [salvandoMovimento, setSalvandoMovimento] = useState(false);
   usePublicarCondominio(condominioId, condominios);
 
   useEffect(() => {
     if (!condominioId) {
       setFaturas([]);
       setDespesasPeriodo([]);
-      setResumo(null);
+      setMovimentoFechado(false);
       return;
     }
 
@@ -163,7 +273,6 @@ export default function ApuracaoScreen({
       setCarregandoPeriodo(true);
       setErro("");
       setInfo("");
-      setResumo(null);
 
       try {
         const response = await fetch(
@@ -175,20 +284,22 @@ export default function ApuracaoScreen({
           return;
         }
 
-        if (!response.ok) {
-          setFaturas([]);
-          setDespesasPeriodo([]);
-          setErro(data.error ?? "Não foi possível carregar a apuração do período.");
-          return;
-        }
-
         const lido = lerResposta(data);
         setFaturas(lido.faturas);
         setDespesasPeriodo(lido.despesasPeriodo);
+        setMovimentoFechado(lido.fechado);
+
+        if (!response.ok || data.error) {
+          setErro(
+            data.error ?? "Não foi possível carregar a apuração do período.",
+          );
+          return;
+        }
       } catch {
         if (ativo) {
           setFaturas([]);
           setDespesasPeriodo([]);
+          setMovimentoFechado(false);
           setErro("Falha de conexão ao carregar o período.");
         }
       } finally {
@@ -205,46 +316,74 @@ export default function ApuracaoScreen({
     };
   }, [condominioId, mes, ano]);
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
+  function validarFiltros() {
+    if (!condominioId) {
+      setErro("Selecione o condomínio, o mês e o ano antes de continuar.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function alterarMovimento(fechado: boolean) {
+    if (!validarFiltros()) {
+      return;
+    }
+
     setErro("");
     setInfo("");
-    setProcessando(true);
+    setSalvandoMovimento(true);
 
     try {
-      const response = await fetch("/api/apuracao", {
+      const response = await fetch("/api/movimento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ condominioId, mes, ano }),
+        body: JSON.stringify({ condominioId, mes, ano, fechado }),
       });
-      const data = (await response.json()) as RespostaApuracao;
+      const data = (await response.json()) as RespostaApuracao & {
+        error?: string;
+      };
 
       if (!response.ok) {
-        setFaturas([]);
-        setResumo(null);
-        setErro(data.error ?? "Não foi possível processar a apuração.");
+        setErro(data.error ?? "Não foi possível atualizar o movimento do mês.");
         return;
       }
 
-      const lido = lerResposta(data);
-      setFaturas(lido.faturas);
-      setDespesasPeriodo(lido.despesasPeriodo);
-      setResumo(lido.resumo);
-      setInfo(
-        lido.faturas.length === 0
-          ? "Nenhuma unidade encontrada para o período."
-          : `Apuração processada e salva para ${lido.faturas.length} unidade(s).`,
-      );
+      setMovimentoFechado(fechado);
+
+      if (fechado) {
+        const lido = lerResposta(data);
+        setFaturas(lido.faturas);
+        setDespesasPeriodo(lido.despesasPeriodo);
+        setInfo("Movimento do mês fechado. O WhatsApp foi liberado.");
+      } else {
+        setInfo("Movimento reaberto. Leituras e despesas podem ser alteradas.");
+        const recarregar = await fetch(
+          `/api/apuracao?condominioId=${condominioId}&mes=${mes}&ano=${ano}`,
+        );
+        const atualizado = (await recarregar.json()) as RespostaApuracao;
+        const lido = lerResposta(atualizado);
+        setFaturas(lido.faturas);
+        setDespesasPeriodo(lido.despesasPeriodo);
+        setMovimentoFechado(lido.fechado);
+
+        if (!recarregar.ok || atualizado.error) {
+          setErro(
+            atualizado.error ?? "Não foi possível recalcular a apuração.",
+          );
+        }
+      }
     } catch {
-      setFaturas([]);
-      setResumo(null);
       setErro("Falha de conexão. Tente novamente.");
     } finally {
-      setProcessando(false);
+      setSalvandoMovimento(false);
     }
   }
 
   function enviarWhatsApp(item: FaturaUnidade) {
+    if (!movimentoFechado) {
+      return;
+    }
     const url = linkWhatsAppCobranca(
       item.unidade.celular,
       montarMensagemCobranca({
@@ -290,79 +429,25 @@ export default function ApuracaoScreen({
   );
 
   return (
-    <div className="w-full space-y-4 px-2">
-      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-2xl font-medium text-slate-900">
-          Apurar Despesas do Mês
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">
-          O rateio combina duas regras: despesas fixas (portaria, manutenção,
-          energia da área comum) são divididas igualmente entre as unidades
-          participantes; água e gás usam o consumo das leituras multiplicado
-          pelo valor do m³ da concessionária e entram no boleto de cada
-          apartamento.
-        </p>
-
-        <form className="mt-4 space-y-4" onSubmit={onSubmit}>
-          <div className="flex flex-row items-end gap-4">
-            <label className="block min-w-0 flex-1">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                Condomínio
-              </span>
-              <select
-                required
-                value={condominioId}
-                onChange={(event) => setCondominioId(event.target.value)}
-                className={campoClass}
-              >
-                <option value="">Selecione</option>
-                {condominios.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {toTitleCase(item.nome)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block w-48 shrink-0">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                Mês
-              </span>
-              <select
-                required
-                value={mes}
-                onChange={(event) => setMes(Number(event.target.value))}
-                className={campoClass}
-              >
-                {MESES.map((item) => (
-                  <option key={item.valor} value={item.valor}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block w-32 shrink-0">
-              <span className="mb-1.5 block text-sm font-medium text-slate-700">
-                Ano
-              </span>
-              <select
-                required
-                value={ano}
-                onChange={(event) => setAno(Number(event.target.value))}
-                className={campoClass}
-              >
-                {anosReferencia().map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+    <div className="w-full max-w-full space-y-3 overflow-x-hidden px-0 sm:px-2">
+      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+        <ApuracaoFiltros
+          condominioId={condominioId}
+          mes={mes}
+          ano={ano}
+          condominios={condominios}
+          movimentoFechado={movimentoFechado}
+          salvandoMovimento={salvandoMovimento}
+          carregandoPeriodo={carregandoPeriodo}
+          onCondominio={setCondominioId}
+          onMes={setMes}
+          onAno={setAno}
+          onFechar={() => void alterarMovimento(true)}
+          onReabrir={() => void alterarMovimento(false)}
+        />
 
           {condominioId && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
               <p className="text-sm font-medium text-slate-800">
                 Despesas cadastradas no mês
               </p>
@@ -373,19 +458,20 @@ export default function ApuracaoScreen({
                   Nenhuma despesa encontrada para este condomínio e referência.
                 </p>
               ) : (
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-1.5 grid grid-cols-1 gap-x-8 gap-y-1.5 md:grid-cols-2">
                   {despesasPeriodo.map((item, indice) => (
                     <li
                       key={`${item.nome}-${item.bloco}-${indice}`}
-                      className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-slate-700"
+                      className="flex items-baseline justify-between gap-3 text-sm text-slate-700"
                     >
-                      <span>
+                      <span className="min-w-0 truncate">
                         {item.nome} • {item.bloco} •{" "}
                         {rotuloFormaCobranca(item.formaCobranca)}
                       </span>
-                      <span className="font-medium">
-                        {formatarMoeda(item.valorTotal)}
-                      </span>
+                      <ValorContabil
+                        valor={item.valorTotal}
+                        className="shrink-0"
+                      />
                     </li>
                   ))}
                 </ul>
@@ -393,106 +479,59 @@ export default function ApuracaoScreen({
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={processando || !condominioId || carregandoPeriodo}
-            className="w-full rounded-xl bg-blue-600 px-16 py-2.5 text-lg font-semibold tracking-wide text-white uppercase hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {processando ? "Processando..." : "Processar Apuração do Mês"}
-          </button>
-
           {info && (
-            <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
+            <p className="mt-3 rounded-lg bg-teal-50 px-3 py-1.5 text-sm text-teal-800">
               {info}
             </p>
           )}
           {erro && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-1.5 text-sm text-red-700">
               {erro}
             </p>
           )}
-        </form>
       </section>
 
-      {resumo && (
-        <section className="grid gap-3 md:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-500">Despesas fixas</h3>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {formatarMoeda(resumo.totalFixo)}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              Rateio igual entre {resumo.unidades} unidade(s) participantes.
-            </p>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-500">Água por consumo</h3>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {formatarMoeda(resumo.totalAgua)}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              {formatarConsumoM3(resumo.consumoAguaM3)} m³
-              {resumo.valorM3Agua != null
-                ? ` × ${formatarMoeda(resumo.valorM3Agua)} / m³`
-                : ""}
-            </p>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-medium text-slate-500">Gás por consumo</h3>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {formatarMoeda(resumo.totalGas)}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              {formatarConsumoM3(resumo.consumoGasM3)} m³
-              {resumo.valorM3Gas != null
-                ? ` × ${formatarMoeda(resumo.valorM3Gas)} / m³`
-                : ""}
-            </p>
-          </article>
-        </section>
-      )}
-
-      <section className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-xl font-medium text-slate-900">
+      <section className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <h3 className="mb-2 text-xl font-medium text-slate-900">
           Resultado da apuração
         </h3>
 
         {faturasVisiveis.length === 0 ? (
           <p className="text-sm text-slate-500">
             {carregandoPeriodo
-              ? "Carregando o período selecionado..."
-              : "Selecione o condomínio e processe o mês para calcular e salvar o boleto de cada unidade."}
+              ? "Calculando a apuração do período..."
+              : "Selecione o condomínio para calcular o boleto de cada unidade."}
           </p>
         ) : (
-          <div className="w-full max-h-[calc(100vh-14rem)] overflow-auto">
-            <table className="w-full table-auto border-collapse text-sm">
+          <div className="w-full max-w-full overflow-x-auto">
+            <table className="w-max min-w-full table-auto border-collapse text-base">
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-slate-200 text-slate-700">
-                  <th className="w-0 whitespace-nowrap px-3 py-1.5 text-left font-medium">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
                     Bloco
                   </th>
-                  <th className="w-0 whitespace-nowrap px-3 py-1.5 text-left font-medium">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
                     Unidade
                   </th>
-                  <th className="w-0 whitespace-nowrap px-3 py-1.5 text-left font-medium">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
                     Morador
                   </th>
-                  <th className="min-w-[120px] whitespace-nowrap px-4 py-1.5 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
                     Txa Mensal
                   </th>
-                  <th className="min-w-[120px] whitespace-nowrap px-4 py-1.5 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
                     Valor Água
                   </th>
-                  <th className="min-w-[120px] whitespace-nowrap px-4 py-1.5 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
                     Valor Gás
                   </th>
-                  <th className="min-w-[120px] whitespace-nowrap px-4 py-1.5 text-right font-medium">
+                  <th className="w-24 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
                     Outros
                   </th>
-                  <th className="min-w-[120px] whitespace-nowrap px-4 py-1.5 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
                     Valor Total
                   </th>
-                  <th className="whitespace-nowrap px-4 py-1.5 text-center font-medium">
+                  <th className="w-28 whitespace-nowrap px-2 py-1 text-center font-medium">
                     Ação
                   </th>
                 </tr>
@@ -500,46 +539,33 @@ export default function ApuracaoScreen({
               <tbody>
                 {faturasVisiveis.map((item) => (
                   <tr key={item.id} className="border-b border-slate-100">
-                    <td className="whitespace-nowrap px-3 py-1.5 text-left text-slate-700">
+                    <td className="whitespace-nowrap px-2 py-1 text-left text-slate-700">
                       {typeof item.unidade.bloco === "string"
                         ? item.unidade.bloco || "—"
                         : item.unidade.bloco.nome}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-1.5 text-left font-medium text-slate-900">
+                    <td className="whitespace-nowrap px-2 py-1 text-left font-medium text-slate-900">
                       {item.unidade.tipoUnidade.nome} {item.unidade.numero}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-1.5 text-left text-slate-700">
+                    <td className="whitespace-nowrap px-2 py-1 text-left text-slate-700">
                       {item.unidade.nomeMorador
                         ? toTitleCase(item.unidade.nomeMorador)
                         : "—"}
                     </td>
                     <CelulaMoeda valor={item.valorEnergia} />
-                    <CelulaMoeda
-                      valor={item.valorAgua}
-                      detalhe={
-                        item.consumoAguaM3 != null
-                          ? `${formatarConsumoM3(item.consumoAguaM3)} m³`
-                          : undefined
-                      }
-                    />
-                    <CelulaMoeda
-                      valor={item.valorGas}
-                      detalhe={
-                        item.consumoGasM3 != null
-                          ? `${formatarConsumoM3(item.consumoGasM3)} m³`
-                          : undefined
-                      }
-                    />
+                    <CelulaMoeda valor={item.valorAgua} />
+                    <CelulaMoeda valor={item.valorGas} />
                     <CelulaMoeda valor={item.valorOutras} />
                     <CelulaMoeda
                       valor={item.valorTotal}
-                      className="min-w-[120px] px-4 py-1.5 text-sm font-medium text-slate-900"
+                      className="w-28 max-w-[120px] px-2 py-1 text-base font-medium text-slate-900"
                     />
-                    <td className="whitespace-nowrap px-4 py-1.5 text-center">
+                    <td className="whitespace-nowrap px-2 py-1 text-center">
                       <button
                         type="button"
+                        disabled={!movimentoFechado}
                         onClick={() => enviarWhatsApp(item)}
-                        className="inline-flex items-center gap-1 rounded-md bg-[#25D366] px-2.5 py-1 text-sm font-medium whitespace-nowrap text-white hover:bg-[#1ebe5a]"
+                        className="inline-flex items-center gap-1 rounded-md bg-[#25D366] px-2.5 py-1 text-sm font-medium whitespace-nowrap text-white hover:bg-[#1ebe5a] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -555,8 +581,8 @@ export default function ApuracaoScreen({
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-slate-50 text-sm font-medium text-slate-900">
-                  <td className="whitespace-nowrap px-3 py-1.5 text-left" colSpan={3}>
+                <tr className="bg-slate-50 text-base font-medium text-slate-900">
+                  <td className="whitespace-nowrap px-2 py-1 text-left" colSpan={3}>
                     Totais
                   </td>
                   <CelulaMoeda valor={totais.valorEnergia} />
@@ -564,7 +590,7 @@ export default function ApuracaoScreen({
                   <CelulaMoeda valor={totais.valorGas} />
                   <CelulaMoeda valor={totais.valorOutras} />
                   <CelulaMoeda valor={totais.valorTotal} />
-                  <td className="px-4 py-1.5" />
+                  <td className="px-2 py-1" />
                 </tr>
               </tfoot>
             </table>

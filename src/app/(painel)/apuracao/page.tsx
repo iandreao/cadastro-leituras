@@ -9,5 +9,9 @@ export default async function ApuracaoPage() {
     select: { id: true, nome: true },
   });
 
-  return <ApuracaoScreen condominios={condominios} />;
+  return (
+    <div className="w-full max-w-full overflow-x-hidden">
+      <ApuracaoScreen condominios={condominios} />
+    </div>
+  );
 }
