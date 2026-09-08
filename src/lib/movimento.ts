@@ -22,14 +22,39 @@ export async function movimentoEstaFechado(
   mes: number,
   ano: number,
 ) {
-  const registro = await prisma.movimentoMensal.findUnique({
-    where: {
-      condominioId_mes_ano: { condominioId, mes, ano },
-    },
-    select: { fechado: true },
-  });
+  try {
+    const repositorio = (
+      prisma as {
+        movimentoMensal?: {
+          findUnique: (args: {
+            where: {
+              condominioId_mes_ano: {
+                condominioId: string;
+                mes: number;
+                ano: number;
+              };
+            };
+            select: { fechado: true };
+          }) => Promise<{ fechado: boolean } | null>;
+        };
+      }
+    ).movimentoMensal;
 
-  return Boolean(registro?.fechado);
+    if (!repositorio?.findUnique) {
+      return false;
+    }
+
+    const registro = await repositorio.findUnique({
+      where: {
+        condominioId_mes_ano: { condominioId, mes, ano },
+      },
+      select: { fechado: true },
+    });
+
+    return Boolean(registro?.fechado);
+  } catch {
+    return false;
+  }
 }
 
 export async function definirMovimentoFechado(

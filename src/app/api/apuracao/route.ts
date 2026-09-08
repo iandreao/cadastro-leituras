@@ -7,6 +7,29 @@ import {
 import { movimentoEstaFechado } from "@/lib/movimento";
 import { apuracaoSchema } from "@/lib/validations";
 
+function mensagemErro(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function paramAusente(valor: string | null) {
+  if (valor == null) {
+    return true;
+  }
+
+  const texto = valor.trim();
+  return texto === "" || texto === "undefined" || texto === "null";
+}
+
+function respostaApuracaoVazia(error?: string) {
+  return NextResponse.json({
+    movimento: { fechado: false },
+    faturas: [],
+    despesasPeriodo: [],
+    resumo: null,
+    ...(error ? { error } : {}),
+  });
+}
+
 export async function GET(request: Request) {
   const { error } = await requireApiSession(request);
 
@@ -14,50 +37,49 @@ export async function GET(request: Request) {
     return error;
   }
 
-  const { searchParams } = new URL(request.url);
-  const parsed = apuracaoSchema.safeParse({
-    condominioId: searchParams.get("condominioId") ?? "",
-    mes: searchParams.get("mes"),
-    ano: searchParams.get("ano"),
-  });
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
-      { status: 400 },
-    );
-  }
-
   try {
+    const { searchParams } = new URL(request.url);
+    const condominioId = searchParams.get("condominioId");
+    const mes = searchParams.get("mes");
+    const ano = searchParams.get("ano");
+
+    if (paramAusente(condominioId) || paramAusente(mes) || paramAusente(ano)) {
+      return respostaApuracaoVazia();
+    }
+
+    const parsed = apuracaoSchema.safeParse({
+      condominioId: condominioId?.trim(),
+      mes,
+      ano,
+    });
+
+    if (!parsed.success) {
+      return respostaApuracaoVazia(
+        parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      );
+    }
+
     const resultado = await carregarApuracaoPeriodo(
       parsed.data.condominioId,
       parsed.data.mes,
       parsed.data.ano,
     );
+    const corpo = {
+      movimento: resultado.movimento ?? { fechado: false },
+      faturas: resultado.faturas ?? [],
+      despesasPeriodo: resultado.despesasPeriodo ?? [],
+      resumo: resultado.resumo ?? null,
+      error: "error" in resultado ? resultado.error : undefined,
+    };
 
     if ("status" in resultado && resultado.status === 404) {
-      return NextResponse.json(
-        {
-          error: resultado.error,
-          movimento: resultado.movimento,
-          faturas: resultado.faturas,
-          despesasPeriodo: resultado.despesasPeriodo,
-          resumo: resultado.resumo,
-        },
-        { status: 404 },
-      );
+      return NextResponse.json(corpo, { status: 404 });
     }
 
-    return NextResponse.json({
-      movimento: resultado.movimento,
-      faturas: resultado.faturas,
-      despesasPeriodo: resultado.despesasPeriodo,
-      resumo: resultado.resumo,
-      error: "error" in resultado ? resultado.error : undefined,
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Não foi possível carregar a apuração do período." },
+    return NextResponse.json(corpo);
+  } catch (error) {
+    return Response.json(
+      { error: mensagemErro(error, "Não foi possível carregar a apuração do período.") },
       { status: 500 },
     );
   }
@@ -72,6 +94,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    const condominioId = body?.condominioId;
+    const mes = body?.mes;
+    const ano = body?.ano;
+
+    if (paramAusente(String(condominioId ?? "")) || mes == null || ano == null) {
+      return respostaApuracaoVazia();
+    }
+
     const parsed = apuracaoSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -105,20 +135,26 @@ export async function POST(request: Request) {
 
     if ("error" in resultado) {
       return NextResponse.json(
-        { error: resultado.error },
+        {
+          error: resultado.error,
+          movimento: { fechado: false },
+          faturas: [],
+          despesasPeriodo: [],
+          resumo: null,
+        },
         { status: resultado.status },
       );
     }
 
     return NextResponse.json({
       movimento: { fechado: false },
-      faturas: resultado.faturas,
-      resumo: resultado.resumo,
-      despesasPeriodo: resultado.despesasPeriodo,
+      faturas: resultado.faturas ?? [],
+      resumo: resultado.resumo ?? null,
+      despesasPeriodo: resultado.despesasPeriodo ?? [],
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Não foi possível processar a apuração." },
+  } catch (error) {
+    return Response.json(
+      { error: mensagemErro(error, "Não foi possível processar a apuração.") },
       { status: 500 },
     );
   }
