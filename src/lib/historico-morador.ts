@@ -242,6 +242,7 @@ export async function buscarMoradoresNaCompetencia(
       SELECT id, "unidadeId", "nomeMorador", email, celular, "dataEntrada", "dataSaida"
       FROM "HistoricoMorador"
       WHERE "unidadeId" IN (${Prisma.join(unidadeIds)})
+        AND "dataEntrada" <= ${fim}
       ORDER BY "unidadeId" ASC, "dataEntrada" ASC
     `;
 
