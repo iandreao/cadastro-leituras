@@ -137,6 +137,28 @@ const rotuloFiltro = "mb-1 block text-sm font-medium text-slate-700";
 
 const agoraBrasil = periodoBrasil();
 
+function IndicadorCarregamento({
+  texto,
+  className = "py-6",
+}: {
+  texto: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 text-sm text-slate-600 ${className}`.trim()}
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600"
+        aria-hidden="true"
+      />
+      <span>{texto}</span>
+    </div>
+  );
+}
+
 function ApuracaoFiltros({
   condominioId,
   mes,
@@ -144,7 +166,7 @@ function ApuracaoFiltros({
   condominios,
   movimentoFechado,
   salvandoMovimento,
-  carregandoPeriodo,
+  isLoading,
   onCondominio,
   onMes,
   onAno,
@@ -157,13 +179,15 @@ function ApuracaoFiltros({
   condominios: Condominio[];
   movimentoFechado: boolean;
   salvandoMovimento: boolean;
-  carregandoPeriodo: boolean;
+  isLoading: boolean;
   onCondominio: (valor: string) => void;
   onMes: (valor: number) => void;
   onAno: (valor: number) => void;
   onFechar: () => void;
   onReabrir: () => void;
 }) {
+  const botoesDesabilitados = salvandoMovimento || isLoading;
+
   return (
     <div className="flex w-full max-w-full flex-col gap-4 lg:flex-row lg:items-end">
       <label htmlFor="apuracao-condominio" className="block w-full min-w-0 lg:flex-1">
@@ -220,11 +244,11 @@ function ApuracaoFiltros({
         </label>
       </div>
 
-      {condominioId ? (
+      {condominioId && (!isLoading || salvandoMovimento) ? (
         movimentoFechado ? (
           <button
             type="button"
-            disabled={salvandoMovimento || carregandoPeriodo}
+            disabled={botoesDesabilitados}
             onClick={onReabrir}
             className="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
           >
@@ -233,7 +257,7 @@ function ApuracaoFiltros({
         ) : (
           <button
             type="button"
-            disabled={salvandoMovimento || carregandoPeriodo}
+            disabled={botoesDesabilitados}
             onClick={onFechar}
             className="w-full rounded-lg bg-[#0b3b4a] px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-[#0e4d61] disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
           >
@@ -257,26 +281,27 @@ export default function ApuracaoScreen({
   const [despesasPeriodo, setDespesasPeriodo] = useState<DespesaPeriodo[]>([]);
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
-  const [carregandoPeriodo, setCarregandoPeriodo] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [movimentoFechado, setMovimentoFechado] = useState(false);
   const [salvandoMovimento, setSalvandoMovimento] = useState(false);
   usePublicarCondominio(condominioId, condominios);
 
   useEffect(() => {
+    setFaturas([]);
+    setDespesasPeriodo([]);
+    setMovimentoFechado(false);
+    setErro("");
+    setInfo("");
+
     if (!condominioId) {
-      setFaturas([]);
-      setDespesasPeriodo([]);
-      setMovimentoFechado(false);
+      setIsLoading(false);
       return;
     }
 
     let ativo = true;
+    setIsLoading(true);
 
     async function carregarPeriodo() {
-      setCarregandoPeriodo(true);
-      setErro("");
-      setInfo("");
-
       try {
         const response = await fetch(
           `/api/apuracao?condominioId=${condominioId}&mes=${mes}&ano=${ano}`,
@@ -296,7 +321,6 @@ export default function ApuracaoScreen({
           setErro(
             data.error ?? "Não foi possível carregar a apuração do período.",
           );
-          return;
         }
       } catch {
         if (ativo) {
@@ -307,7 +331,7 @@ export default function ApuracaoScreen({
         }
       } finally {
         if (ativo) {
-          setCarregandoPeriodo(false);
+          setIsLoading(false);
         }
       }
     }
@@ -318,6 +342,33 @@ export default function ApuracaoScreen({
       ativo = false;
     };
   }, [condominioId, mes, ano]);
+
+  function alterarFiltroCondominio(valor: string) {
+    setFaturas([]);
+    setDespesasPeriodo([]);
+    setErro("");
+    setInfo("");
+    setIsLoading(Boolean(valor));
+    setCondominioId(valor);
+  }
+
+  function alterarFiltroMes(valor: number) {
+    setFaturas([]);
+    setDespesasPeriodo([]);
+    setErro("");
+    setInfo("");
+    setIsLoading(Boolean(condominioId));
+    setMes(valor);
+  }
+
+  function alterarFiltroAno(valor: number) {
+    setFaturas([]);
+    setDespesasPeriodo([]);
+    setErro("");
+    setInfo("");
+    setIsLoading(Boolean(condominioId));
+    setAno(valor);
+  }
 
   function validarFiltros() {
     if (!condominioId) {
@@ -336,6 +387,7 @@ export default function ApuracaoScreen({
     setErro("");
     setInfo("");
     setSalvandoMovimento(true);
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/movimento", {
@@ -380,6 +432,7 @@ export default function ApuracaoScreen({
       setErro("Falha de conexão. Tente novamente.");
     } finally {
       setSalvandoMovimento(false);
+      setIsLoading(false);
     }
   }
 
@@ -441,10 +494,10 @@ export default function ApuracaoScreen({
           condominios={condominios}
           movimentoFechado={movimentoFechado}
           salvandoMovimento={salvandoMovimento}
-          carregandoPeriodo={carregandoPeriodo}
-          onCondominio={setCondominioId}
-          onMes={setMes}
-          onAno={setAno}
+          isLoading={isLoading}
+          onCondominio={alterarFiltroCondominio}
+          onMes={alterarFiltroMes}
+          onAno={alterarFiltroAno}
           onFechar={() => void alterarMovimento(true)}
           onReabrir={() => void alterarMovimento(false)}
         />
@@ -454,8 +507,11 @@ export default function ApuracaoScreen({
               <p className="text-sm font-medium text-slate-800">
                 Despesas cadastradas no mês
               </p>
-              {carregandoPeriodo ? (
-                <p className="mt-1 text-sm text-slate-500">Carregando despesas...</p>
+              {isLoading ? (
+                <IndicadorCarregamento
+                  texto="Carregando despesas..."
+                  className="mt-1 py-2"
+                />
               ) : despesasPeriodo.length === 0 ? (
                 <p className="mt-1 text-sm text-slate-500">
                   Nenhuma despesa encontrada para este condomínio e referência.
@@ -499,11 +555,11 @@ export default function ApuracaoScreen({
           Resultado da apuração
         </h3>
 
-        {faturasVisiveis.length === 0 ? (
+        {isLoading ? (
+          <IndicadorCarregamento texto="Carregando dados da apuração..." />
+        ) : faturasVisiveis.length === 0 ? (
           <p className="text-sm text-slate-500">
-            {carregandoPeriodo
-              ? "Calculando a apuração do período..."
-              : "Selecione o condomínio para calcular o boleto de cada unidade."}
+            Selecione o condomínio para calcular o boleto de cada unidade.
           </p>
         ) : (
           <div className="w-full max-w-full overflow-x-auto">
@@ -566,7 +622,7 @@ export default function ApuracaoScreen({
                     <td className="whitespace-nowrap px-2 py-1 text-center">
                       <button
                         type="button"
-                        disabled={!movimentoFechado}
+                        disabled={!movimentoFechado || isLoading}
                         onClick={() => enviarWhatsApp(item)}
                         className="inline-flex items-center gap-1 rounded-md bg-[#25D366] px-2.5 py-1 text-sm font-medium whitespace-nowrap text-white hover:bg-[#1ebe5a] disabled:cursor-not-allowed disabled:opacity-40"
                       >
