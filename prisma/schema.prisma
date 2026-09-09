@@ -95,10 +95,25 @@ model Unidade {
   leiturasAgua   LeituraAgua[]
   leiturasGas    LeituraGas[]
   faturas        FaturaUnidade[]
+  historicoMoradores HistoricoMorador[]
 
   @@unique([condominioId, blocoId, numero])
   @@index([condominioId])
   @@index([blocoId])
+}
+
+model HistoricoMorador {
+  id          String    @id @default(cuid())
+  unidadeId   String
+  unidade     Unidade   @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  nomeMorador String
+  email       String    @default("")
+  celular     String    @default("")
+  dataEntrada DateTime
+  dataSaida   DateTime?
+
+  @@index([unidadeId])
+  @@index([unidadeId, dataEntrada])
 }
 
 model Leitura {

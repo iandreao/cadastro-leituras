@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
+import { garantirHistoricoInicial } from "@/lib/historico-morador";
 import { invalidarCacheCadastro, listarUnidadesLeitura } from "@/lib/cache-cadastro";
 import { marcarBloqueioExclusaoUnidades } from "@/lib/unidade-exclusao";
 import { unidadeLoteSchema, unidadeSchema } from "@/lib/validations";
@@ -156,6 +157,12 @@ export async function POST(request: Request) {
     });
 
     invalidarCacheCadastro();
+    await garantirHistoricoInicial({
+      id: unidade.id,
+      nomeMorador: unidade.nomeMorador,
+      celular: unidade.celular,
+      createdAt: unidade.createdAt,
+    });
     return NextResponse.json(unidade, { status: 201 });
   } catch {
     return NextResponse.json(

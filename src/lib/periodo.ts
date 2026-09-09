@@ -29,3 +29,9 @@ export function mesmoPeriodo(
 export function marcarFechado(valor: unknown) {
   return valor === true || valor === 1 || valor === "1" || valor === "t" || valor === "true";
 }
+
+export function limitesCompetencia(mes: number, ano: number) {
+  const inicio = new Date(Date.UTC(ano, mes - 1, 1, 3, 0, 0, 0));
+  const fim = new Date(Date.UTC(ano, mes, 1, 3, 0, 0, 0) - 1);
+  return { inicio, fim };
+}

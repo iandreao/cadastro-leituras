@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { buscarMoradoresNaCompetencia } from "@/lib/historico-morador";
 import {
   consumoGasInconsistente,
   consumoM3,
@@ -406,12 +407,26 @@ export async function listarFaturasApuracao(
     mes,
     ano,
   );
+  const moradores = await buscarMoradoresNaCompetencia(
+    faturas.map((fatura) => fatura.unidadeId),
+    mes,
+    ano,
+  );
 
-  return faturas.map((fatura) => ({
-    ...fatura,
-    consumoAguaM3: consumos.agua.get(fatura.unidadeId) ?? 0,
-    consumoGasM3: consumos.gas.get(fatura.unidadeId) ?? 0,
-  }));
+  return faturas.map((fatura) => {
+    const morador = moradores.get(fatura.unidadeId);
+
+    return {
+      ...fatura,
+      unidade: {
+        ...fatura.unidade,
+        nomeMorador: morador ? morador.nomeMorador : fatura.unidade.nomeMorador,
+        celular: morador ? morador.celular : fatura.unidade.celular,
+      },
+      consumoAguaM3: consumos.agua.get(fatura.unidadeId) ?? 0,
+      consumoGasM3: consumos.gas.get(fatura.unidadeId) ?? 0,
+    };
+  });
 }
 
 export async function processarApuracao(

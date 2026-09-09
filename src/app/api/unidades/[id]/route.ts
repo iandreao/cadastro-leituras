@@ -6,6 +6,7 @@ import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
 import { unidadeTemVinculoDeExclusao } from "@/lib/unidade-exclusao";
+import { registrarMoradorNaUnidade } from "@/lib/historico-morador";
 import { unidadeSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -124,6 +125,19 @@ export async function PUT(request: Request, context: RouteContext) {
       },
       include: includeUnidade,
     });
+
+    await registrarMoradorNaUnidade(
+      {
+        id: atual.id,
+        nomeMorador: atual.nomeMorador,
+        celular: atual.celular,
+        createdAt: atual.createdAt,
+      },
+      {
+        nomeMorador: unidade.nomeMorador,
+        celular: unidade.celular,
+      },
+    );
 
     invalidarCacheCadastro();
     return NextResponse.json(unidade);
