@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { blocoCadastroSchema } from "@/lib/validations";
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       include: includeBloco,
     });
 
+    invalidarCacheCadastro();
     return NextResponse.json(bloco, { status: 201 });
   } catch (error) {
     if (

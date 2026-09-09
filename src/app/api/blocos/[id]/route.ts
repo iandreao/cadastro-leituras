@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { nomeBlocoDuplicado } from "@/lib/blocos-db";
+import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { blocoCadastroSchema } from "@/lib/validations";
@@ -68,6 +69,7 @@ export async function PUT(request: Request, context: RouteContext) {
       include: includeContagens,
     });
 
+    invalidarCacheCadastro();
     return NextResponse.json(bloco);
   } catch {
     return NextResponse.json(
@@ -125,5 +127,6 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   await prisma.bloco.delete({ where: { id } });
 
+  invalidarCacheCadastro();
   return NextResponse.json({ ok: true });
 }

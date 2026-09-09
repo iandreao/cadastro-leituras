@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
@@ -56,6 +57,7 @@ export async function PUT(request: Request, context: RouteContext) {
       },
     });
 
+    invalidarCacheCadastro();
     return NextResponse.json(condominio);
   } catch {
     return NextResponse.json(
@@ -128,5 +130,6 @@ export async function DELETE(request: Request, context: RouteContext) {
     prisma.condominio.delete({ where: { id } }),
   ]);
 
+  invalidarCacheCadastro();
   return NextResponse.json({ ok: true });
 }

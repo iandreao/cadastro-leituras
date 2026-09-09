@@ -58,7 +58,13 @@ export async function GET(request: Request) {
       ...(condominioId ? { unidade: { condominioId } } : {}),
     },
     orderBy: { createdAt: "desc" },
-    include: includeUnidade,
+    select: {
+      unidadeId: true,
+      mes: true,
+      ano: true,
+      valorAgua: true,
+      valorGas: true,
+    },
   });
 
   return NextResponse.json(leituras);

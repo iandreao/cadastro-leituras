@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
+import { invalidarCacheCadastro, listarUnidadesLeitura } from "@/lib/cache-cadastro";
 import { unidadeLoteSchema, unidadeSchema } from "@/lib/validations";
 
 const includeUnidade = {
@@ -22,15 +23,29 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const condominioId = searchParams.get("condominioId");
+  const grade = searchParams.get("grade") === "1";
+
+  if (grade && condominioId) {
+    const unidadesLeitura = await listarUnidadesLeitura(condominioId);
+    return NextResponse.json(unidadesLeitura);
+  }
 
   const unidades = await prisma.unidade.findMany({
     where: condominioId ? { condominioId } : undefined,
     orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
-    include: {
-      ...includeUnidade,
-      _count: {
-        select: { leituras: true },
-      },
+    select: {
+      id: true,
+      numero: true,
+      nomeMorador: true,
+      celular: true,
+      tipoUnidadeId: true,
+      tipoConsumo: true,
+      blocoId: true,
+      condominioId: true,
+      condominio: { select: { id: true, nome: true } },
+      tipoUnidade: { select: { id: true, nome: true } },
+      bloco: { select: { id: true, nome: true } },
+      _count: { select: { leituras: true } },
     },
   });
 
@@ -138,6 +153,7 @@ export async function POST(request: Request) {
       include: includeUnidade,
     });
 
+    invalidarCacheCadastro();
     return NextResponse.json(unidade, { status: 201 });
   } catch {
     return NextResponse.json(
@@ -229,5 +245,6 @@ async function criarLote(body: unknown) {
     orderBy: { numero: "asc" },
   });
 
+  invalidarCacheCadastro();
   return NextResponse.json({ criadas }, { status: 201 });
 }

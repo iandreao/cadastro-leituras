@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
+import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
@@ -123,6 +124,7 @@ export async function PUT(request: Request, context: RouteContext) {
       include: includeUnidade,
     });
 
+    invalidarCacheCadastro();
     return NextResponse.json(unidade);
   } catch {
     return NextResponse.json(
@@ -171,5 +173,6 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   await prisma.unidade.delete({ where: { id } });
 
+  invalidarCacheCadastro();
   return NextResponse.json({ ok: true });
 }

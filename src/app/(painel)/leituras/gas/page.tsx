@@ -1,13 +1,10 @@
-import { prisma } from "@/lib/prisma";
+import { listarCondominiosResumo } from "@/lib/cache-cadastro";
 import LeituraGradeScreen from "@/components/LeituraGradeScreen";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeituraGasPage() {
-  const condominios = await prisma.condominio.findMany({
-    orderBy: { nome: "asc" },
-    select: { id: true, nome: true },
-  });
+  const condominios = await listarCondominiosResumo();
 
   return <LeituraGradeScreen tipo="gas" condominios={condominios} />;
 }

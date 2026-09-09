@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { garantirBlocoPadrao } from "@/lib/blocos-db";
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
 
     await garantirBlocoPadrao(condominio.id);
 
+    invalidarCacheCadastro();
     return NextResponse.json(condominio, { status: 201 });
   } catch {
     return NextResponse.json(

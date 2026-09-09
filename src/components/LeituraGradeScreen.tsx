@@ -149,7 +149,7 @@ export default function LeituraGradeScreen({
 
       try {
         const [resUnidades, resLeituras, resMovimento] = await Promise.all([
-          fetch(`/api/unidades?condominioId=${condominioId}`),
+          fetch(`/api/unidades?condominioId=${condominioId}&grade=1`),
           fetch(`/api/leituras?condominioId=${condominioId}`),
           fetch(
             `/api/movimento?condominioId=${condominioId}&mes=${mesNumero}&ano=${anoNumero}`,

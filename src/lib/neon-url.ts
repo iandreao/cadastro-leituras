@@ -21,6 +21,10 @@ export function urlNeonComPoolerESsl(urlBruta: string) {
     parsed.hostname = NEON_POOLER_HOST;
     parsed.searchParams.set("sslmode", "require");
     parsed.searchParams.set("channel_binding", "require");
+    parsed.searchParams.set("pgbouncer", "true");
+    parsed.searchParams.set("connect_timeout", "10");
+    parsed.searchParams.set("connection_limit", "1");
+    parsed.searchParams.set("pool_timeout", "10");
     return parsed.toString();
   } catch {
     const semProtocolo = url.replace(/^postgres(?:ql)?:\/\//i, "");
@@ -33,6 +37,10 @@ export function urlNeonComPoolerESsl(urlBruta: string) {
     const params = new URLSearchParams(query);
     params.set("sslmode", "require");
     params.set("channel_binding", "require");
+    params.set("pgbouncer", "true");
+    params.set("connect_timeout", "10");
+    params.set("connection_limit", "1");
+    params.set("pool_timeout", "10");
     const userinfo = credenciais ? `${credenciais}@` : "";
     return `postgresql://${userinfo}${NEON_POOLER_HOST}${caminho || "/neondb"}?${params.toString()}`;
   }

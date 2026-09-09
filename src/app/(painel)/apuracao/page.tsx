@@ -1,13 +1,10 @@
-import { prisma } from "@/lib/prisma";
+import { listarCondominiosResumo } from "@/lib/cache-cadastro";
 import ApuracaoScreen from "./ApuracaoScreen";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApuracaoPage() {
-  const condominios = await prisma.condominio.findMany({
-    orderBy: { nome: "asc" },
-    select: { id: true, nome: true },
-  });
+  const condominios = await listarCondominiosResumo();
 
   return (
     <div className="w-full max-w-full overflow-x-hidden">

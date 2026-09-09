@@ -1,3 +1,4 @@
+import { listarBlocosResumo, listarCondominiosResumo } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import DespesaScreen from "./DespesaScreen";
 
@@ -5,26 +6,24 @@ export const dynamic = "force-dynamic";
 
 export default async function DespesasPage() {
   const [condominios, blocos, despesas] = await Promise.all([
-    prisma.condominio.findMany({
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-    prisma.bloco.findMany({
-      select: { id: true, nome: true, condominioId: true },
-      orderBy: { nome: "asc" },
-    }),
+    listarCondominiosResumo(),
+    listarBlocosResumo(),
     prisma.despesaMensal.findMany({
       orderBy: [{ ano: "desc" }, { mes: "desc" }, { createdAt: "desc" }],
-      include: {
-        condominio: {
-          select: { id: true, nome: true },
-        },
-        tipoDespesa: {
-          select: { id: true, nome: true },
-        },
-        bloco: {
-          select: { id: true, nome: true, condominioId: true },
-        },
+      select: {
+        id: true,
+        blocoId: true,
+        mes: true,
+        ano: true,
+        valorTotal: true,
+        valorFixo: true,
+        valorVariavel: true,
+        formaCobranca: true,
+        condominioId: true,
+        tipoDespesaId: true,
+        condominio: { select: { id: true, nome: true } },
+        tipoDespesa: { select: { id: true, nome: true } },
+        bloco: { select: { id: true, nome: true, condominioId: true } },
       },
     }),
   ]);
