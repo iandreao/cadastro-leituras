@@ -473,7 +473,7 @@ export default function CondominioScreen({
                     <td className="border border-gray-300 px-3 py-1 font-medium whitespace-nowrap text-slate-900">
                       {toTitleCase(item.nome)}
                     </td>
-                    <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
+                    <td className="border border-gray-300 px-3 py-1 font-mono font-normal whitespace-nowrap tabular-nums text-slate-700">
                       {maskCpfOuCnpj(item.cnpj)}
                     </td>
                     <td className="border border-gray-300 px-3 py-1 text-slate-700">
