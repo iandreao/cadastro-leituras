@@ -12,6 +12,7 @@ import {
 } from "@/lib/despesas";
 import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
 import { MESES, anosReferencia, nomeMes } from "@/lib/leituras";
+import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 
 type Condominio = {
   id: string;
@@ -76,7 +77,7 @@ export default function DespesaScreen({
   blocosIniciais: BlocoCadastro[];
   despesasIniciais: DespesaMensal[];
 }) {
-  const [condominios] = useState(condominiosIniciais);
+  const condominios = useCondominiosResumo(condominiosIniciais);
   const [tipos, setTipos] = useState<TipoDespesa[]>(tiposIniciais);
   const [blocos, setBlocos] = useState(blocosIniciais);
   const [despesas, setDespesas] = useState<DespesaMensal[]>(despesasIniciais);

@@ -80,6 +80,7 @@ export default function CondominioScreen({
 
   useEffect(() => {
     limparFormulario();
+    void carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

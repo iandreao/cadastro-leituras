@@ -12,6 +12,7 @@ import { MESES, anosReferencia } from "@/lib/leituras";
 import { periodoBrasil } from "@/lib/periodo";
 import { toTitleCase } from "@/lib/masks";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
+import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 
 function formatarNumeroMoeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -270,10 +271,11 @@ function ApuracaoFiltros({
 }
 
 export default function ApuracaoScreen({
-  condominios,
+  condominios: condominiosIniciais = [],
 }: {
-  condominios: Condominio[];
+  condominios?: Condominio[];
 }) {
+  const condominios = useCondominiosResumo(condominiosIniciais);
   const [condominioId, setCondominioId] = useState("");
   const [mes, setMes] = useState(agoraBrasil.mes);
   const [ano, setAno] = useState(agoraBrasil.ano);

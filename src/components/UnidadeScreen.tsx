@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { nomeBloco, queryEscopoTipo } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import {
@@ -136,9 +136,14 @@ export default function UnidadeScreen({
     });
   }
 
+  useEffect(() => {
+    void carregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function carregar() {
     const [resCondominios, resUnidades] = await Promise.all([
-      fetch("/api/condominios"),
+      fetch("/api/condominios?resumo=1"),
       fetch("/api/unidades"),
     ]);
 

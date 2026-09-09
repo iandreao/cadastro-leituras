@@ -13,6 +13,16 @@ export async function GET(request: Request) {
     return error;
   }
 
+  const resumo = new URL(request.url).searchParams.get("resumo") === "1";
+
+  if (resumo) {
+    const condominios = await prisma.condominio.findMany({
+      orderBy: { nome: "asc" },
+      select: { id: true, nome: true },
+    });
+    return NextResponse.json(condominios);
+  }
+
   const condominios = await prisma.condominio.findMany({
     orderBy: { updatedAt: "desc" },
     include: {

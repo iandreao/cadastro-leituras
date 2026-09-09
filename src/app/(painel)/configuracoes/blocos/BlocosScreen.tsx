@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
+import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 import {
   AREA_ROLAVEL,
   CARTAO_FORMULARIO,
@@ -30,10 +31,11 @@ const campoClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
 export default function BlocosScreen({
-  condominios,
+  condominios: condominiosIniciais = [],
 }: {
-  condominios: Condominio[];
+  condominios?: Condominio[];
 }) {
+  const condominios = useCondominiosResumo(condominiosIniciais);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [condominioId, setCondominioId] = useState("");
   const [nome, setNome] = useState("");

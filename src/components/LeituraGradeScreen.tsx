@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { nomeBloco } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { periodoBrasil } from "@/lib/periodo";
+import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 import { toTitleCase } from "@/lib/masks";
 import {
   anosReferencia,
@@ -106,11 +107,12 @@ function leituraAtualExistente(
 
 export default function LeituraGradeScreen({
   tipo,
-  condominios,
+  condominios: condominiosIniciais = [],
 }: {
   tipo: TipoLeituraTela;
-  condominios: Condominio[];
+  condominios?: Condominio[];
 }) {
+  const condominios = useCondominiosResumo(condominiosIniciais);
   const titulo =
     tipo === "agua" ? "Inserir Leitura de Água" : "Inserir Leitura de Gás";
   const [condominioId, setCondominioId] = useState("");
