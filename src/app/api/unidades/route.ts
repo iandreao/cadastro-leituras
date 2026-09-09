@@ -5,6 +5,7 @@ import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
 import { invalidarCacheCadastro, listarUnidadesLeitura } from "@/lib/cache-cadastro";
+import { marcarBloqueioExclusaoUnidades } from "@/lib/unidade-exclusao";
 import { unidadeLoteSchema, unidadeSchema } from "@/lib/validations";
 
 const includeUnidade = {
@@ -45,11 +46,12 @@ export async function GET(request: Request) {
       condominio: { select: { id: true, nome: true } },
       tipoUnidade: { select: { id: true, nome: true } },
       bloco: { select: { id: true, nome: true } },
-      _count: { select: { leituras: true } },
+      _count: { select: { leituras: true, faturas: true } },
     },
   });
 
-  return NextResponse.json(unidades);
+  const unidadesComBloqueio = await marcarBloqueioExclusaoUnidades(unidades);
+  return NextResponse.json(unidadesComBloqueio);
 }
 
 export async function POST(request: Request) {

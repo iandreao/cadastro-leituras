@@ -58,3 +58,27 @@ export function gerarNumerosUnidades(
 
   return numeros;
 }
+
+export type ContagemExclusaoUnidade = {
+  leituras?: number;
+  faturas?: number;
+  leiturasAgua?: number;
+  leiturasGas?: number;
+};
+
+export function exclusaoUnidadeBloqueada(item: {
+  exclusaoBloqueada?: boolean;
+  _count?: ContagemExclusaoUnidade | null;
+}) {
+  if (typeof item.exclusaoBloqueada === "boolean") {
+    return item.exclusaoBloqueada;
+  }
+
+  const contagem = item._count;
+  return (
+    (contagem?.leituras ?? 0) > 0 ||
+    (contagem?.faturas ?? 0) > 0 ||
+    (contagem?.leiturasAgua ?? 0) > 0 ||
+    (contagem?.leiturasGas ?? 0) > 0
+  );
+}

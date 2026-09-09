@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
+import { unidadeTemVinculoDeExclusao } from "@/lib/unidade-exclusao";
 import { unidadeSchema } from "@/lib/validations";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -145,9 +146,7 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   const unidade = await prisma.unidade.findUnique({
     where: { id },
-    include: {
-      _count: { select: { leituras: true, faturas: true } },
-    },
+    select: { id: true },
   });
 
   if (!unidade) {
@@ -157,16 +156,12 @@ export async function DELETE(request: Request, context: RouteContext) {
     );
   }
 
-  if (unidade._count.leituras > 0) {
+  if (await unidadeTemVinculoDeExclusao(id)) {
     return NextResponse.json(
-      { error: "Não é possível excluir: há leitura vinculada a esta unidade." },
-      { status: 409 },
-    );
-  }
-
-  if (unidade._count.faturas > 0) {
-    return NextResponse.json(
-      { error: "Não é possível excluir: há fatura vinculada a esta unidade." },
+      {
+        error:
+          "Não é possível excluir: há leitura, consumo ou movimento vinculado a esta unidade.",
+      },
       { status: 409 },
     );
   }

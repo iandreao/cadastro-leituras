@@ -11,6 +11,7 @@ import {
 } from "@/lib/layout-cadastro";
 import { maskCelular, toTitleCase } from "@/lib/masks";
 import {
+  exclusaoUnidadeBloqueada,
   gerarNumerosUnidades,
   nomeTipoUnidade,
   TIPOS_CONSUMO,
@@ -48,8 +49,12 @@ type Unidade = {
     nome: string;
   };
   _count?: {
-    leituras: number;
+    leituras?: number;
+    faturas?: number;
+    leiturasAgua?: number;
+    leiturasGas?: number;
   };
+  exclusaoBloqueada?: boolean;
 };
 
 type ModoCadastro = "individual" | "lote";
@@ -229,11 +234,9 @@ export default function UnidadeScreen({
   }
 
   async function excluir(item: Unidade) {
-    const temLeitura = (item._count?.leituras ?? 0) > 0;
-
-    if (temLeitura) {
+    if (exclusaoUnidadeBloqueada(item)) {
       setErro(
-        "Não é possível excluir: há leitura vinculada a esta unidade.",
+        "Não é possível excluir: há leitura, consumo ou movimento vinculado a esta unidade.",
       );
       return;
     }
@@ -686,7 +689,10 @@ export default function UnidadeScreen({
                 </tr>
               </thead>
               <tbody>
-                {unidadesVisiveis.map((item) => (
+                {unidadesVisiveis.map((item) => {
+                  const exclusaoBloqueada = exclusaoUnidadeBloqueada(item);
+
+                  return (
                   <tr
                     key={item.id}
                     className={
@@ -717,10 +723,10 @@ export default function UnidadeScreen({
                         <button
                           type="button"
                           onClick={() => void excluir(item)}
-                          disabled={(item._count?.leituras ?? 0) > 0}
+                          disabled={exclusaoBloqueada}
                           title={
-                            (item._count?.leituras ?? 0) > 0
-                              ? "Exclusão bloqueada: há leitura vinculada a esta unidade."
+                            exclusaoBloqueada
+                              ? "Exclusão bloqueada: há leitura, consumo ou movimento vinculado a esta unidade."
                               : "Excluir"
                           }
                           className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -730,7 +736,8 @@ export default function UnidadeScreen({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
