@@ -21,10 +21,23 @@ function criarPrismaClient() {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? criarPrismaClient();
-
-globalForPrisma.prisma = prisma;
-
 export function getPrisma() {
-  return prisma;
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = criarPrismaClient();
+  }
+
+  return globalForPrisma.prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const client = getPrisma();
+    const value = Reflect.get(client as object, property, client);
+
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+
+    return value;
+  },
+});

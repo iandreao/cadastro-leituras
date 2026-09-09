@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma, prisma } from "@/lib/prisma";
 
 export const MENSAGEM_MES_FECHADO =
   "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
@@ -50,33 +49,35 @@ export async function definirMovimentoFechado(
   ano: number,
   fechado: boolean,
 ) {
+  const client = getPrisma();
+  const repo = client.movimentoMensal;
+
   console.log("[movimento] gravar MovimentoMensal", {
     condominioId,
     mes,
     ano,
     fechado,
+    temUpsert: typeof repo?.upsert === "function",
   });
 
-  try {
-    return await prisma.movimentoMensal.upsert({
+  if (typeof repo?.upsert === "function") {
+    return repo.upsert({
       where: {
         condominioId_mes_ano: { condominioId, mes, ano },
       },
       update: { fechado },
       create: { condominioId, mes, ano, fechado },
     });
-  } catch (error) {
-    console.error("[movimento] upsert indisponível, gravando via SQL", error);
-
-    await prisma.$executeRaw`
-      INSERT INTO "MovimentoMensal" ("id", "condominioId", "mes", "ano", "fechado", "createdAt", "updatedAt")
-      VALUES (${randomUUID()}, ${condominioId}, ${mes}, ${ano}, ${fechado}, NOW(), NOW())
-      ON CONFLICT ("condominioId", "mes", "ano")
-      DO UPDATE SET "fechado" = ${fechado}, "updatedAt" = NOW()
-    `;
-
-    return { condominioId, mes, ano, fechado };
   }
+
+  await client.$executeRaw`
+    INSERT INTO "MovimentoMensal" ("id", "condominioId", "mes", "ano", "fechado", "createdAt", "updatedAt")
+    VALUES (${crypto.randomUUID()}, ${condominioId}, ${mes}, ${ano}, ${fechado}, NOW(), NOW())
+    ON CONFLICT ("condominioId", "mes", "ano")
+    DO UPDATE SET "fechado" = ${fechado}, "updatedAt" = NOW()
+  `;
+
+  return { condominioId, mes, ano, fechado };
 }
 
 export async function falhaSeMovimentoFechado(
