@@ -15,6 +15,15 @@ export function toTitleCase(value: string) {
     });
 }
 
+export function maskCpf(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
 export function maskCnpj(value: string) {
   const digits = onlyDigits(value).slice(0, 14);
 
@@ -23,6 +32,14 @@ export function maskCnpj(value: string) {
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1/$2")
     .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
+export function maskCpfOuCnpj(value: string) {
+  return onlyDigits(value).length <= 11 ? maskCpf(value) : maskCnpj(value);
+}
+
+export function tipoDocumentoDe(value: string): "cpf" | "cnpj" {
+  return onlyDigits(value).length <= 11 ? "cpf" : "cnpj";
 }
 
 export function maskCelular(value: string) {
@@ -37,6 +54,28 @@ export function maskCelular(value: string) {
   return digits
     .replace(/^(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+export function isValidCpf(value: string) {
+  const digits = onlyDigits(value);
+
+  if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) {
+    return false;
+  }
+
+  const calc = (length: number) => {
+    const sum = digits
+      .slice(0, length)
+      .split("")
+      .reduce(
+        (acc, digit, index) => acc + Number(digit) * (length + 1 - index),
+        0,
+      );
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+
+  return calc(9) === Number(digits[9]) && calc(10) === Number(digits[10]);
 }
 
 export function isValidCnpj(value: string) {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isValidCnpj, onlyDigits } from "@/lib/masks";
+import { isValidCnpj, isValidCpf, onlyDigits } from "@/lib/masks";
 import { TIPOS_CONSUMO } from "@/lib/unidades";
 
 export const cadastroSchema = z
@@ -34,18 +34,72 @@ export const resetPasswordSchema = z
     path: ["confirmarSenha"],
   });
 
-export const condominioSchema = z.object({
-  cnpj: z
-    .string()
-    .refine((value) => onlyDigits(value).length === 14, "Informe o CNPJ completo.")
-    .refine((value) => isValidCnpj(value), "CNPJ inválido."),
-  nome: z.string().trim().min(2, "Informe o nome do condomínio."),
-  endereco: z.string().trim().min(5, "Informe o endereço."),
-  email: z.email("Informe um e-mail válido."),
-  celular: z
-    .string()
-    .refine((value) => onlyDigits(value).length >= 10, "Informe um celular válido."),
-});
+export const condominioSchema = z
+  .object({
+    tipoDocumento: z.enum(["cpf", "cnpj"]).optional(),
+    cnpj: z.string(),
+    nome: z.string().trim().min(2, "Informe o nome do condomínio."),
+    endereco: z.string().trim().min(5, "Informe o endereço."),
+    email: z.email("Informe um e-mail válido."),
+    celular: z
+      .string()
+      .refine(
+        (value) => onlyDigits(value).length >= 10,
+        "Informe um celular válido.",
+      ),
+  })
+  .superRefine((data, ctx) => {
+    const digits = onlyDigits(data.cnpj);
+    const tipo =
+      data.tipoDocumento ??
+      (digits.length === 11 ? "cpf" : digits.length === 14 ? "cnpj" : null);
+
+    if (tipo === "cpf") {
+      if (digits.length !== 11) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cnpj"],
+          message: "Informe o CPF completo.",
+        });
+        return;
+      }
+
+      if (!isValidCpf(data.cnpj)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cnpj"],
+          message: "CPF inválido.",
+        });
+      }
+      return;
+    }
+
+    if (tipo === "cnpj") {
+      if (digits.length !== 14) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cnpj"],
+          message: "Informe o CNPJ completo.",
+        });
+        return;
+      }
+
+      if (!isValidCnpj(data.cnpj)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cnpj"],
+          message: "CNPJ inválido.",
+        });
+      }
+      return;
+    }
+
+    ctx.addIssue({
+      code: "custom",
+      path: ["cnpj"],
+      message: "Informe um CPF ou CNPJ válido.",
+    });
+  });
 
 export const unidadeSchema = z.object({
   numero: z.string().trim().min(1, "Informe o número da unidade."),

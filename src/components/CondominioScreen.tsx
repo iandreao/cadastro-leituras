@@ -1,13 +1,25 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   AREA_ROLAVEL,
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
 } from "@/lib/layout-cadastro";
-import { maskCelular, maskCnpj, toTitleCase } from "@/lib/masks";
+import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
+import {
+  maskCelular,
+  maskCnpj,
+  maskCpf,
+  isValidCpf,
+  maskCpfOuCnpj,
+  onlyDigits,
+  tipoDocumentoDe,
+  toTitleCase,
+} from "@/lib/masks";
+
+type TipoDocumento = "cpf" | "cnpj";
 
 type Condominio = {
   id: string;
@@ -19,29 +31,57 @@ type Condominio = {
   temLeitura?: boolean;
 };
 
-const vazio = {
-  cnpj: "",
-  nome: "",
-  endereco: "",
-  email: "",
-  celular: "",
-};
+function formularioVazio() {
+  return {
+    cnpj: "",
+    nome: "",
+    endereco: "",
+    email: "",
+    celular: "",
+  };
+}
 
 export default function CondominioScreen({
   inicial,
 }: {
   inicial: Condominio[];
 }) {
-  const [form, setForm] = useState(vazio);
+  const { publicar } = useCondominioSelecionado();
+  const [form, setForm] = useState(formularioVazio);
   const [lista, setLista] = useState<Condominio[]>(inicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
+  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento>("cnpj");
+  const [erroCpf, setErroCpf] = useState("");
   const [consultandoCnpj, setConsultandoCnpj] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [ultimoCnpjConsultado, setUltimoCnpjConsultado] = useState("");
+  const [formKey, setFormKey] = useState(0);
+  const ehCpf = tipoDocumento === "cpf";
+  const cpfValido = !ehCpf || isValidCpf(form.cnpj);
+  const tipoDocumentoRef = useRef(tipoDocumento);
+  tipoDocumentoRef.current = tipoDocumento;
 
   const titulo = editandoId ? "Alterar condomínio" : "Incluir condomínio";
+
+  function limparFormulario() {
+    setForm(formularioVazio());
+    setTipoDocumento("cnpj");
+    setEditandoId(null);
+    setErro("");
+    setErroCpf("");
+    setInfo("");
+    setUltimoCnpjConsultado("");
+    setConsultandoCnpj(false);
+    setFormKey((atual) => atual + 1);
+    publicar(null);
+  }
+
+  useEffect(() => {
+    limparFormulario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function carregar() {
     const response = await fetch("/api/condominios");
@@ -49,8 +89,31 @@ export default function CondominioScreen({
     setLista(data);
   }
 
+  function escolherTipo(proximo: TipoDocumento) {
+    if (editandoId || proximo === tipoDocumento) {
+      return;
+    }
+
+    setTipoDocumento(proximo);
+    setForm((atual) => ({
+      ...atual,
+      cnpj: "",
+      nome: "",
+      endereco: "",
+    }));
+    setUltimoCnpjConsultado("");
+    setConsultandoCnpj(false);
+    setErro("");
+    setErroCpf("");
+    setInfo("");
+  }
+
   async function consultarCnpj(cnpjValue: string) {
-    const digits = cnpjValue.replace(/\D/g, "");
+    if (tipoDocumento !== "cnpj") {
+      return;
+    }
+
+    const digits = onlyDigits(cnpjValue);
 
     if (digits.length !== 14 || digits === ultimoCnpjConsultado) {
       return;
@@ -68,16 +131,26 @@ export default function CondominioScreen({
         error?: string;
       };
 
+      if (tipoDocumentoRef.current !== "cnpj") {
+        return;
+      }
+
       if (!response.ok) {
         setErro(data.error ?? "Não foi possível validar o CNPJ.");
         return;
       }
 
-      setForm((atual) => ({
-        ...atual,
-        nome: toTitleCase(data.nome ?? atual.nome),
-        endereco: toTitleCase(data.endereco ?? atual.endereco),
-      }));
+      setForm((atual) => {
+        if (onlyDigits(atual.cnpj) !== digits) {
+          return atual;
+        }
+
+        return {
+          ...atual,
+          nome: toTitleCase(data.nome ?? atual.nome),
+          endereco: toTitleCase(data.endereco ?? atual.endereco),
+        };
+      });
       setUltimoCnpjConsultado(digits);
       setInfo("CNPJ validado na Receita Federal. Nome e endereço preenchidos.");
     } catch {
@@ -87,32 +160,52 @@ export default function CondominioScreen({
     }
   }
 
-  function onCnpjChange(value: string) {
-    const mascarado = maskCnpj(value);
+  function validarCpfDigitado(valor: string) {
+    const digits = onlyDigits(valor);
+
+    if (digits.length < 11) {
+      setErroCpf("");
+      return;
+    }
+
+    setErroCpf(isValidCpf(valor) ? "" : "CPF inválido.");
+  }
+
+  function onDocumentoChange(value: string) {
+    const mascarado = ehCpf ? maskCpf(value) : maskCnpj(value);
     setForm((atual) => ({ ...atual, cnpj: mascarado }));
+
+    if (ehCpf) {
+      validarCpfDigitado(mascarado);
+      return;
+    }
+
+    setErroCpf("");
     void consultarCnpj(mascarado);
   }
 
   function cancelar() {
-    setForm(vazio);
-    setEditandoId(null);
-    setErro("");
-    setInfo("");
-    setUltimoCnpjConsultado("");
+    limparFormulario();
   }
 
   function alterar(item: Condominio) {
+    const tipo = tipoDocumentoDe(item.cnpj);
+    setTipoDocumento(tipo);
     setForm({
-      cnpj: maskCnpj(item.cnpj),
+      cnpj: tipo === "cpf" ? maskCpf(item.cnpj) : maskCnpj(item.cnpj),
       nome: toTitleCase(item.nome),
       endereco: toTitleCase(item.endereco),
       email: item.email,
       celular: maskCelular(item.celular),
     });
     setEditandoId(item.id);
-    setUltimoCnpjConsultado(item.cnpj);
+    setUltimoCnpjConsultado(tipo === "cnpj" ? onlyDigits(item.cnpj) : "");
     setErro("");
+    setErroCpf(
+      tipo === "cpf" && !isValidCpf(item.cnpj) ? "CPF inválido." : "",
+    );
     setInfo("");
+    publicar({ id: item.id, nome: item.nome });
   }
 
   async function excluir(item: Condominio) {
@@ -137,16 +230,25 @@ export default function CondominioScreen({
       return;
     }
 
-    if (editandoId === item.id) {
-      cancelar();
-    }
-
+    limparFormulario();
     await carregar();
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setErro("");
+
+    if (ehCpf) {
+      const digits = onlyDigits(form.cnpj);
+
+      if (digits.length !== 11 || !isValidCpf(form.cnpj)) {
+        setErroCpf(
+          digits.length !== 11 ? "Informe o CPF completo." : "CPF inválido.",
+        );
+        return;
+      }
+    }
+
     setSalvando(true);
 
     try {
@@ -158,6 +260,7 @@ export default function CondominioScreen({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          tipoDocumento,
           nome: toTitleCase(form.nome),
           endereco: toTitleCase(form.endereco),
         }),
@@ -169,7 +272,7 @@ export default function CondominioScreen({
         return;
       }
 
-      cancelar();
+      limparFormulario();
       await carregar();
     } catch {
       setErro("Falha de conexão. Tente novamente.");
@@ -182,18 +285,75 @@ export default function CondominioScreen({
     <div className={GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">{titulo}</h2>
-        <p className="mt-1 shrink-0 text-lg text-slate-600">
-          O CNPJ é consultado na Receita Federal ao completar 14 dígitos.
-        </p>
 
-        <form className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`} onSubmit={onSubmit}>
-          <Campo
-            label="CNPJ"
-            value={form.cnpj}
-            onChange={onCnpjChange}
-            placeholder="00.000.000/0000-00"
-          />
-          {consultandoCnpj && (
+        <form
+          key={formKey}
+          autoComplete="off"
+          className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`}
+          onSubmit={onSubmit}
+        >
+          <fieldset disabled={Boolean(editandoId)}>
+            <legend className="mb-1.5 block text-lg font-medium text-slate-700">
+              Tipo de Pessoa
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { valor: "cpf", rotulo: "Física (CPF)" },
+                  { valor: "cnpj", rotulo: "Jurídica (CNPJ)" },
+                ] as const
+              ).map((opcao) => {
+                const ativo = tipoDocumento === opcao.valor;
+                const bloqueado = Boolean(editandoId);
+
+                return (
+                  <label
+                    key={opcao.valor}
+                    className={`flex items-center justify-center rounded-lg border px-3 py-2.5 text-center text-base font-medium transition ${
+                      bloqueado
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer"
+                    } ${
+                      ativo
+                        ? "border-teal-700 bg-teal-700 text-white"
+                        : `border-slate-300 bg-white text-slate-700 ${
+                            bloqueado ? "" : "hover:bg-slate-50"
+                          }`
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="tipoDocumento"
+                      value={opcao.valor}
+                      checked={ativo}
+                      disabled={bloqueado}
+                      onChange={() => escolherTipo(opcao.valor)}
+                      className="sr-only"
+                    />
+                    {opcao.rotulo}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div>
+            <Campo
+              label={ehCpf ? "CPF" : "CNPJ"}
+              value={form.cnpj}
+              onChange={onDocumentoChange}
+              inputMode="numeric"
+              autoComplete="off"
+              name="condominio-documento"
+              maxLength={ehCpf ? 14 : 18}
+              invalido={Boolean(ehCpf && erroCpf)}
+              placeholder={ehCpf ? "000.000.000-00" : "00.000.000/0000-00"}
+            />
+            {ehCpf && erroCpf ? (
+              <p className="mt-1.5 text-lg text-red-700">{erroCpf}</p>
+            ) : null}
+          </div>
+          {consultandoCnpj && !ehCpf && (
             <p className="text-lg font-medium text-teal-700">
               Consultando Receita Federal...
             </p>
@@ -201,11 +361,17 @@ export default function CondominioScreen({
           <Campo
             label="Nome"
             value={form.nome}
+            disabled={!cpfValido}
+            autoComplete="off"
+            name="condominio-nome"
             onChange={(value) => setForm((atual) => ({ ...atual, nome: value }))}
           />
           <Campo
             label="Endereço"
             value={form.endereco}
+            disabled={!cpfValido}
+            autoComplete="off"
+            name="condominio-endereco"
             onChange={(value) =>
               setForm((atual) => ({ ...atual, endereco: value }))
             }
@@ -214,11 +380,17 @@ export default function CondominioScreen({
             label="E-mail"
             type="email"
             value={form.email}
+            disabled={!cpfValido}
+            autoComplete="off"
+            name="condominio-email"
             onChange={(value) => setForm((atual) => ({ ...atual, email: value }))}
           />
           <Campo
             label="Celular"
             value={form.celular}
+            disabled={!cpfValido}
+            autoComplete="off"
+            name="condominio-celular"
             onChange={(value) =>
               setForm((atual) => ({ ...atual, celular: maskCelular(value) }))
             }
@@ -239,7 +411,7 @@ export default function CondominioScreen({
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={salvando}
+              disabled={salvando || !cpfValido}
               className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
             >
               {salvando ? "Salvando..." : editandoId ? "Salvar alteração" : "Incluir"}
@@ -280,7 +452,7 @@ export default function CondominioScreen({
                     Nome
                   </th>
                   <th className="border border-gray-300 px-3 py-1 text-left font-medium whitespace-nowrap text-slate-700">
-                    CNPJ
+                    CPF/CNPJ
                   </th>
                   <th className="min-w-[16rem] border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
                     Endereço
@@ -302,7 +474,7 @@ export default function CondominioScreen({
                       {toTitleCase(item.nome)}
                     </td>
                     <td className="border border-gray-300 px-3 py-1 whitespace-nowrap text-slate-700">
-                      {maskCnpj(item.cnpj)}
+                      {maskCpfOuCnpj(item.cnpj)}
                     </td>
                     <td className="border border-gray-300 px-3 py-1 text-slate-700">
                       {toTitleCase(item.endereco)}
@@ -348,12 +520,24 @@ function Campo({
   onChange,
   type = "text",
   placeholder,
+  inputMode,
+  autoComplete = "off",
+  name,
+  maxLength,
+  disabled = false,
+  invalido = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
+  inputMode?: "numeric" | "email" | "text";
+  autoComplete?: string;
+  name?: string;
+  maxLength?: number;
+  disabled?: boolean;
+  invalido?: boolean;
 }) {
   return (
     <label className="block">
@@ -361,12 +545,21 @@ function Campo({
         {label}
       </span>
       <input
-        required
+        required={!disabled}
         type={type}
+        name={name}
         value={value}
         placeholder={placeholder}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        maxLength={maxLength}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+        className={`w-full rounded-lg border px-3 py-2.5 text-lg outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${
+          invalido
+            ? "border-red-500 focus:border-red-600 focus:ring-red-600/20"
+            : "border-slate-300 focus:border-teal-600 focus:ring-teal-600/20"
+        }`}
       />
     </label>
   );

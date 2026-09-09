@@ -6,7 +6,11 @@ import {
   responderErroAuth,
 } from "@/lib/auth-api";
 import { enviarEmailRedefinicao } from "@/lib/mail-redefinicao";
-import { prisma } from "@/lib/prisma";
+import {
+  apagarTokenPorValor,
+  apagarTokensPorEmail,
+  criarTokenRedefinicao,
+} from "@/lib/password-reset-token";
 import { forgotPasswordSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
@@ -43,25 +47,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, mensagem: MENSAGEM_OK });
     }
 
-    await prisma.passwordResetToken.deleteMany({
-      where: { email },
-    });
+    await apagarTokensPorEmail(email);
 
     const token = randomUUID();
     const expires = new Date(Date.now() + 60 * 60 * 1000);
 
-    await prisma.passwordResetToken.create({
-      data: {
-        email,
-        token,
-        expires,
-      },
-    });
+    await criarTokenRedefinicao(email, token, expires);
 
     try {
       await enviarEmailRedefinicao(email, token);
     } catch (erroEnvio) {
-      await prisma.passwordResetToken.deleteMany({ where: { token } });
+      await apagarTokenPorValor(token);
       console.error(erroEnvio);
       return NextResponse.json(
         { error: "Não foi possível enviar o e-mail de recuperação agora." },

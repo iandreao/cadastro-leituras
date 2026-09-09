@@ -5,6 +5,7 @@ import {
   definirMovimentoFechado,
   listarPeriodosFechados,
   movimentoEstaFechado,
+  type PeriodoFechado,
 } from "@/lib/movimento";
 import { prisma } from "@/lib/prisma";
 import { apuracaoSchema, movimentoSchema } from "@/lib/validations";
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
               parsed.data.ano,
             )) ||
             fechados.some(
-              (item) =>
+              (item: PeriodoFechado) =>
                 item.mes === parsed.data.mes && item.ano === parsed.data.ano,
             ),
           fechados,

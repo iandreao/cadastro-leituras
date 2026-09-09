@@ -5,7 +5,10 @@ import {
   repositorioUsuario,
   responderErroAuth,
 } from "@/lib/auth-api";
-import { prisma } from "@/lib/prisma";
+import {
+  apagarTokenPorId,
+  buscarTokenRedefinicao,
+} from "@/lib/password-reset-token";
 import { resetPasswordSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
@@ -30,13 +33,11 @@ export async function POST(request: Request) {
     }
 
     const { token, senha } = parsed.data;
-    const registro = await prisma.passwordResetToken.findUnique({
-      where: { token },
-    });
+    const registro = await buscarTokenRedefinicao(token);
 
     if (!registro || registro.expires.getTime() <= Date.now()) {
       if (registro) {
-        await prisma.passwordResetToken.delete({ where: { id: registro.id } });
+        await apagarTokenPorId(registro.id);
       }
 
       return NextResponse.json(
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     });
 
     if (!usuario) {
-      await prisma.passwordResetToken.delete({ where: { id: registro.id } });
+      await apagarTokenPorId(registro.id);
       return NextResponse.json(
         { error: "Link inválido ou expirado. Solicite uma nova recuperação." },
         { status: 400 },
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
       data: { senha: hash },
     });
 
-    await prisma.passwordResetToken.delete({ where: { id: registro.id } });
+    await apagarTokenPorId(registro.id);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

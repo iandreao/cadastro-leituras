@@ -6,9 +6,9 @@ export const TAG_BLOCOS = "cadastro-blocos";
 export const TAG_UNIDADES = "cadastro-unidades";
 
 export function invalidarCacheCadastro() {
-  revalidateTag(TAG_CONDOMINIOS);
-  revalidateTag(TAG_BLOCOS);
-  revalidateTag(TAG_UNIDADES);
+  revalidateTag(TAG_CONDOMINIOS, "max");
+  revalidateTag(TAG_BLOCOS, "max");
+  revalidateTag(TAG_UNIDADES, "max");
 }
 
 export const listarCondominiosResumo = unstable_cache(

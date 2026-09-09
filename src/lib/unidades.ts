@@ -6,6 +6,9 @@ export const TIPOS_UNIDADE_PADRAO = [
   "Condomínio",
 ] as const;
 
+export const TIPOS_UNIDADE = TIPOS_UNIDADE_PADRAO;
+export type TipoUnidade = (typeof TIPOS_UNIDADE_PADRAO)[number];
+
 export const TIPOS_CONSUMO = [
   "Água/Gás",
   "Só Água",

@@ -14,32 +14,59 @@ const TIPOS_DESPESA = [
 ];
 
 async function main() {
-  const energia = await prisma.tipoDespesa.findUnique({
+  const energias = await prisma.tipoDespesa.findMany({
     where: { nome: "Energia" },
   });
-  const aguaCondominio = await prisma.tipoDespesa.findUnique({
-    where: { nome: "Água Condominio" },
-  });
 
-  if (energia && !aguaCondominio) {
-    await prisma.tipoDespesa.update({
-      where: { id: energia.id },
-      data: { nome: "Água Condominio" },
+  for (const energia of energias) {
+    const aguaCondominio = await prisma.tipoDespesa.findUnique({
+      where: {
+        nome_condominioId_blocoId: {
+          nome: "Água Condominio",
+          condominioId: energia.condominioId,
+          blocoId: energia.blocoId,
+        },
+      },
     });
-  } else if (energia && aguaCondominio) {
-    await prisma.despesaMensal.updateMany({
-      where: { tipoDespesaId: energia.id },
-      data: { tipoDespesaId: aguaCondominio.id },
-    });
-    await prisma.tipoDespesa.delete({ where: { id: energia.id } });
+
+    if (!aguaCondominio) {
+      await prisma.tipoDespesa.update({
+        where: { id: energia.id },
+        data: { nome: "Água Condominio" },
+      });
+    } else {
+      await prisma.despesaMensal.updateMany({
+        where: { tipoDespesaId: energia.id },
+        data: { tipoDespesaId: aguaCondominio.id },
+      });
+      await prisma.tipoDespesa.delete({ where: { id: energia.id } });
+    }
   }
 
-  for (const nome of TIPOS_DESPESA) {
-    await prisma.tipoDespesa.upsert({
-      where: { nome },
-      update: {},
-      create: { nome },
-    });
+  const condominios = await prisma.condominio.findMany({
+    select: { id: true, blocos: { select: { id: true } } },
+  });
+
+  for (const condominio of condominios) {
+    for (const bloco of condominio.blocos) {
+      for (const nome of TIPOS_DESPESA) {
+        await prisma.tipoDespesa.upsert({
+          where: {
+            nome_condominioId_blocoId: {
+              nome,
+              condominioId: condominio.id,
+              blocoId: bloco.id,
+            },
+          },
+          update: {},
+          create: {
+            nome,
+            condominioId: condominio.id,
+            blocoId: bloco.id,
+          },
+        });
+      }
+    }
   }
 }
 
