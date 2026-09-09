@@ -35,3 +35,12 @@ export function limitesCompetencia(mes: number, ano: number) {
   const fim = new Date(Date.UTC(ano, mes, 1, 3, 0, 0, 0) - 1);
   return { inicio, fim };
 }
+
+export function anoMesBrasil(data: Date) {
+  const { mes, ano } = periodoBrasil(data);
+  return ano * 12 + mes;
+}
+
+export function chaveCompetencia(mes: number, ano: number) {
+  return ano * 12 + mes;
+}

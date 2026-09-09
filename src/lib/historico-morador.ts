@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { toTitleCase } from "@/lib/masks";
-import { limitesCompetencia } from "@/lib/periodo";
+import { anoMesBrasil, chaveCompetencia, limitesCompetencia } from "@/lib/periodo";
 import { getPrisma } from "@/lib/prisma";
 
 export type MoradorPeriodo = {
@@ -26,6 +26,8 @@ type HistoricoLinha = {
   dataSaida: Date | null;
 };
 
+const INICIO_OCUPACAO_HISTORICO = new Date(Date.UTC(2000, 0, 1, 3, 0, 0, 0));
+
 function chaveMorador(nome: string) {
   return nome.trim().toLocaleLowerCase("pt-BR").replace(/\s+/g, " ");
 }
@@ -41,6 +43,20 @@ function repoHistorico() {
   };
 
   return client.historicoMorador;
+}
+
+function ocupaCompetencia(
+  linha: Pick<HistoricoLinha, "dataEntrada" | "dataSaida">,
+  mes: number,
+  ano: number,
+) {
+  const competencia = chaveCompetencia(mes, ano);
+  const entradaMes = anoMesBrasil(linha.dataEntrada);
+  const saidaMes = linha.dataSaida
+    ? anoMesBrasil(linha.dataSaida)
+    : Number.POSITIVE_INFINITY;
+
+  return entradaMes <= competencia && saidaMes >= competencia;
 }
 
 async function buscarAberto(unidadeId: string): Promise<HistoricoLinha | null> {
@@ -150,45 +166,40 @@ async function registrarMoradorNaUnidadeInterno(
   const agora = new Date();
   const aberto = await buscarAberto(unidade.id);
 
-  if (chaveMorador(nomeNovo) === chaveMorador(unidade.nomeMorador)) {
+  if (!chaveMorador(nomeNovo)) {
     if (aberto) {
-      await atualizarAberto(aberto.id, {
-        nomeMorador: nomeNovo || aberto.nomeMorador,
-        celular: celularNovo,
-        email: emailNovo,
-      });
-      return;
+      await fecharRegistro(aberto.id, agora);
     }
-
-    if (nomeNovo.trim()) {
-      await criarRegistro({
-        unidadeId: unidade.id,
-        nomeMorador: nomeNovo,
-        email: emailNovo,
-        celular: celularNovo,
-        dataEntrada: unidade.createdAt ?? agora,
-        dataSaida: null,
-      });
-    }
-
     return;
   }
 
+  if (aberto && chaveMorador(aberto.nomeMorador) === chaveMorador(nomeNovo)) {
+    await atualizarAberto(aberto.id, {
+      nomeMorador: nomeNovo,
+      celular: celularNovo,
+      email: emailNovo,
+    });
+    return;
+  }
+
+  let houveTroca = false;
+
   if (aberto) {
     await fecharRegistro(aberto.id, agora);
-  } else if (chaveMorador(unidade.nomeMorador)) {
+    houveTroca = true;
+  } else if (
+    chaveMorador(unidade.nomeMorador) &&
+    chaveMorador(unidade.nomeMorador) !== chaveMorador(nomeNovo)
+  ) {
     await criarRegistro({
       unidadeId: unidade.id,
       nomeMorador: toTitleCase(unidade.nomeMorador),
       email: "",
       celular: unidade.celular,
-      dataEntrada: unidade.createdAt ?? agora,
+      dataEntrada: INICIO_OCUPACAO_HISTORICO,
       dataSaida: agora,
     });
-  }
-
-  if (!nomeNovo.trim()) {
-    return;
+    houveTroca = true;
   }
 
   await criarRegistro({
@@ -196,7 +207,7 @@ async function registrarMoradorNaUnidadeInterno(
     nomeMorador: nomeNovo,
     email: emailNovo,
     celular: celularNovo,
-    dataEntrada: agora,
+    dataEntrada: houveTroca ? agora : INICIO_OCUPACAO_HISTORICO,
     dataSaida: null,
   });
 }
@@ -224,70 +235,66 @@ export async function buscarMoradoresNaCompetencia(
   }
 
   const { inicio, fim } = limitesCompetencia(mes, ano);
-  const repo = repoHistorico();
-  let linhas: Array<{
-    unidadeId: string;
-    nomeMorador: string;
-    celular: string;
-    email: string;
-  }> = [];
+  const competencia = chaveCompetencia(mes, ano);
 
   try {
-    if (typeof repo?.findMany === "function") {
-      const registros = (await repo.findMany({
-        where: {
-          unidadeId: { in: unidadeIds },
-          dataEntrada: { lte: fim },
-          OR: [{ dataSaida: null }, { dataSaida: { gt: inicio } }],
-        },
-        orderBy: { dataEntrada: "desc" },
-        select: {
-          unidadeId: true,
-          nomeMorador: true,
-          celular: true,
-          email: true,
-        },
-      })) as Array<{
-        unidadeId: string;
-        nomeMorador: string;
-        celular: string;
-        email: string;
-      }>;
+    const linhas = await getPrisma().$queryRaw<HistoricoLinha[]>`
+      SELECT id, "unidadeId", "nomeMorador", email, celular, "dataEntrada", "dataSaida"
+      FROM "HistoricoMorador"
+      WHERE "unidadeId" IN (${Prisma.join(unidadeIds)})
+      ORDER BY "unidadeId" ASC, "dataEntrada" ASC
+    `;
 
-      linhas = registros;
-    } else {
-      linhas = await getPrisma().$queryRaw<
-        Array<{
-          unidadeId: string;
-          nomeMorador: string;
-          celular: string;
-          email: string;
-        }>
-      >`
-        SELECT DISTINCT ON ("unidadeId")
-          "unidadeId", "nomeMorador", celular, email
-        FROM "HistoricoMorador"
-        WHERE "unidadeId" IN (${Prisma.join(unidadeIds)})
-          AND "dataEntrada" <= ${fim}
-          AND ("dataSaida" IS NULL OR "dataSaida" > ${inicio})
-        ORDER BY "unidadeId", "dataEntrada" DESC
-      `;
+    const porUnidade = new Map<string, HistoricoLinha[]>();
+
+    for (const linha of linhas) {
+      const normalizada: HistoricoLinha = {
+        ...linha,
+        dataEntrada: new Date(linha.dataEntrada),
+        dataSaida: linha.dataSaida ? new Date(linha.dataSaida) : null,
+      };
+      const lista = porUnidade.get(normalizada.unidadeId) ?? [];
+      lista.push(normalizada);
+      porUnidade.set(normalizada.unidadeId, lista);
+    }
+
+    for (const [unidadeId, registros] of porUnidade) {
+      const vigentes = registros.filter((linha) => {
+        const noMes =
+          linha.dataEntrada <= fim &&
+          (linha.dataSaida == null || linha.dataSaida >= inicio);
+        const noMesCalendario = ocupaCompetencia(linha, mes, ano);
+        return noMes || noMesCalendario;
+      });
+
+      vigentes.sort(
+        (a, b) => b.dataEntrada.getTime() - a.dataEntrada.getTime(),
+      );
+
+      let escolhido = vigentes[0];
+
+      if (!escolhido) {
+        const primeiro = registros[0];
+        const entradaMes = anoMesBrasil(primeiro.dataEntrada);
+        const saidaMes = primeiro.dataSaida
+          ? anoMesBrasil(primeiro.dataSaida)
+          : Number.POSITIVE_INFINITY;
+
+        if (competencia < entradaMes && saidaMes >= competencia) {
+          escolhido = primeiro;
+        }
+      }
+
+      if (escolhido) {
+        mapa.set(unidadeId, {
+          nomeMorador: escolhido.nomeMorador,
+          celular: escolhido.celular,
+          email: escolhido.email,
+        });
+      }
     }
   } catch (error) {
     console.error("[historico-morador] consulta na competência", error);
-    return mapa;
-  }
-
-  for (const linha of linhas) {
-    if (mapa.has(linha.unidadeId)) {
-      continue;
-    }
-
-    mapa.set(linha.unidadeId, {
-      nomeMorador: linha.nomeMorador,
-      celular: linha.celular,
-      email: linha.email,
-    });
   }
 
   return mapa;
