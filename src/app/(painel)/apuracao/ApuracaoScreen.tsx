@@ -51,15 +51,17 @@ function ValorContabil({
 }) {
   return (
     <div className={`flex w-24 justify-between ${className}`.trim()}>
-      <span className="text-gray-400">R$</span>
-      <span className="font-mono">{formatarNumeroMoeda(valor)}</span>
+      <span className="font-mono font-normal tabular-nums text-gray-400">R$</span>
+      <span className="font-mono font-normal tabular-nums text-slate-800">
+        {formatarNumeroMoeda(valor)}
+      </span>
     </div>
   );
 }
 
 function CelulaMoeda({
   valor,
-  className = "w-28 max-w-[120px] px-2 py-1 text-base text-slate-800",
+  className = "w-28 max-w-[120px] px-2 py-1 text-right text-base text-slate-800",
 }: {
   valor: number;
   className?: string;
@@ -559,7 +561,7 @@ export default function ApuracaoScreen({
                     <CelulaMoeda valor={item.valorOutras} />
                     <CelulaMoeda
                       valor={item.valorTotal}
-                      className="w-28 max-w-[120px] px-2 py-1 text-base font-medium text-slate-900"
+                      className="w-28 max-w-[120px] px-2 py-1 text-right text-base font-medium text-slate-900"
                     />
                     <td className="whitespace-nowrap px-2 py-1 text-center">
                       <button

@@ -56,13 +56,13 @@ const campoClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
 const inputTabela =
-  "w-full rounded-md border border-slate-300 px-2 py-2 text-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
+  "w-full rounded-md border border-slate-300 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
 
 const inputErro =
-  "w-full rounded-md border border-red-600 bg-red-50 px-2 py-2 text-lg text-red-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20";
+  "w-full rounded-md border border-red-600 bg-red-50 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-red-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20";
 
 const inputBloqueado =
-  "w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-2 text-lg text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
+  "w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
 
 const agoraBrasil = periodoBrasil();
 const anos = anosReferencia(agoraBrasil.ano);
@@ -506,8 +506,8 @@ export default function LeituraGradeScreen({
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
         <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] bg-slate-100 px-4 py-3 text-lg font-medium text-slate-800">
           <span>Unidade</span>
-          <span>Leitura Anterior</span>
-          <span>Leitura Atual</span>
+          <span className="text-right">Leitura Anterior</span>
+          <span className="text-right">Leitura Atual</span>
         </div>
 
         <div className="max-h-[540px] overflow-y-auto">
