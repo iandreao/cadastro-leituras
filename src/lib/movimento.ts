@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export const MENSAGEM_MES_FECHADO =
   "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
@@ -11,7 +12,7 @@ export type PeriodoFechado = {
 
 export async function listarPeriodosFechados(condominioId: string) {
   try {
-    const periodos = await getPrisma().movimentoMensal.findMany({
+    const periodos = await prisma.movimentoMensal.findMany({
       where: { condominioId, fechado: true },
       select: { mes: true, ano: true },
       orderBy: [{ ano: "desc" }, { mes: "desc" }],
@@ -30,7 +31,7 @@ export async function movimentoEstaFechado(
   ano: number,
 ) {
   try {
-    const registro = await getPrisma().movimentoMensal.findUnique({
+    const registro = await prisma.movimentoMensal.findUnique({
       where: {
         condominioId_mes_ano: { condominioId, mes, ano },
       },
@@ -49,23 +50,33 @@ export async function definirMovimentoFechado(
   ano: number,
   fechado: boolean,
 ) {
-  const db = getPrisma();
-
-  console.log("[movimento] upsert MovimentoMensal", {
+  console.log("[movimento] gravar MovimentoMensal", {
     condominioId,
     mes,
     ano,
     fechado,
-    temDelegate: Boolean(db.movimentoMensal?.upsert),
   });
 
-  return db.movimentoMensal.upsert({
-    where: {
-      condominioId_mes_ano: { condominioId, mes, ano },
-    },
-    update: { fechado },
-    create: { condominioId, mes, ano, fechado },
-  });
+  try {
+    return await prisma.movimentoMensal.upsert({
+      where: {
+        condominioId_mes_ano: { condominioId, mes, ano },
+      },
+      update: { fechado },
+      create: { condominioId, mes, ano, fechado },
+    });
+  } catch (error) {
+    console.error("[movimento] upsert indisponível, gravando via SQL", error);
+
+    await prisma.$executeRaw`
+      INSERT INTO "MovimentoMensal" ("id", "condominioId", "mes", "ano", "fechado", "createdAt", "updatedAt")
+      VALUES (${randomUUID()}, ${condominioId}, ${mes}, ${ano}, ${fechado}, NOW(), NOW())
+      ON CONFLICT ("condominioId", "mes", "ano")
+      DO UPDATE SET "fechado" = ${fechado}, "updatedAt" = NOW()
+    `;
+
+    return { condominioId, mes, ano, fechado };
+  }
 }
 
 export async function falhaSeMovimentoFechado(
@@ -103,7 +114,7 @@ export async function respostaSePeriodoUnidadeFechado(
   mes: number,
   ano: number,
 ) {
-  const unidade = await getPrisma().unidade.findUnique({
+  const unidade = await prisma.unidade.findUnique({
     where: { id: unidadeId },
     select: { condominioId: true },
   });

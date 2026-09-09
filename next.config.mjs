@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  serverExternalPackages: ["@prisma/client", ".prisma/client", "prisma", "bcryptjs"],
   typescript: {
     ignoreBuildErrors: true,
   },
