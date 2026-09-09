@@ -9,6 +9,7 @@ import {
 import { NOME_BLOCO_PADRAO } from "@/lib/blocos";
 import { rotuloFormaCobranca } from "@/lib/despesas";
 import { MESES, anosReferencia } from "@/lib/leituras";
+import { periodoBrasil } from "@/lib/periodo";
 import { toTitleCase } from "@/lib/masks";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 
@@ -132,7 +133,7 @@ const campoClass =
 
 const rotuloFiltro = "mb-1 block text-sm font-medium text-slate-700";
 
-const agora = new Date();
+const agoraBrasil = periodoBrasil();
 
 function ApuracaoFiltros({
   condominioId,
@@ -208,7 +209,7 @@ function ApuracaoFiltros({
             onChange={(event) => onAno(Number(event.target.value))}
             className={campoClass}
           >
-            {anosReferencia().map((item) => (
+            {anosReferencia(agoraBrasil.ano).map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
@@ -248,8 +249,8 @@ export default function ApuracaoScreen({
   condominios: Condominio[];
 }) {
   const [condominioId, setCondominioId] = useState("");
-  const [mes, setMes] = useState(agora.getMonth() + 1);
-  const [ano, setAno] = useState(agora.getFullYear());
+  const [mes, setMes] = useState(agoraBrasil.mes);
+  const [ano, setAno] = useState(agoraBrasil.ano);
   const [faturas, setFaturas] = useState<FaturaUnidade[]>([]);
   const [despesasPeriodo, setDespesasPeriodo] = useState<DespesaPeriodo[]>([]);
   const [erro, setErro] = useState("");

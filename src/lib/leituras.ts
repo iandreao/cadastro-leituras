@@ -13,7 +13,9 @@ export const MESES = [
   { valor: 12, nome: "Dezembro" },
 ] as const;
 
-export function anosReferencia(atual = new Date().getFullYear()) {
+import { periodoBrasil } from "@/lib/periodo";
+
+export function anosReferencia(atual = periodoBrasil().ano) {
   const anos: number[] = [];
 
   for (let ano = atual - 3; ano <= atual + 1; ano += 1) {

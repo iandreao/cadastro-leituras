@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { nomeBloco } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
+import { periodoBrasil } from "@/lib/periodo";
 import { toTitleCase } from "@/lib/masks";
 import {
   anosReferencia,
@@ -63,8 +64,8 @@ const inputErro =
 const inputBloqueado =
   "w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-2 text-lg text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
 
-const agora = new Date();
-const anos = anosReferencia(agora.getFullYear());
+const agoraBrasil = periodoBrasil();
+const anos = anosReferencia(agoraBrasil.ano);
 
 function leituraAnteriorDaUnidade(
   leituras: Leitura[],
@@ -113,8 +114,8 @@ export default function LeituraGradeScreen({
   const titulo =
     tipo === "agua" ? "Inserir Leitura de Água" : "Inserir Leitura de Gás";
   const [condominioId, setCondominioId] = useState("");
-  const [mes, setMes] = useState(String(agora.getMonth() + 1));
-  const [ano, setAno] = useState(String(agora.getFullYear()));
+  const [mes, setMes] = useState(String(agoraBrasil.mes));
+  const [ano, setAno] = useState(String(agoraBrasil.ano));
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [leituras, setLeituras] = useState<Leitura[]>([]);
   const [atuais, setAtuais] = useState<Record<string, string>>({});
@@ -156,7 +157,10 @@ export default function LeituraGradeScreen({
         ]);
         const listaUnidades = (await resUnidades.json()) as Unidade[];
         const listaLeituras = (await resLeituras.json()) as Leitura[];
-        const movimento = (await resMovimento.json()) as { fechado?: boolean };
+        const movimento = (await resMovimento.json()) as {
+          fechado?: boolean;
+          fechados?: { mes: number; ano: number }[];
+        };
 
         if (!ativo) {
           return;
@@ -187,7 +191,14 @@ export default function LeituraGradeScreen({
         setLeituras(listaLeituras);
         setAtuais(preenchidos);
         setErrosLinha({});
-        setMovimentoFechado(Boolean(movimento.fechado));
+        setMovimentoFechado(
+          Boolean(movimento.fechado) ||
+            Boolean(
+              movimento.fechados?.some(
+                (item) => item.mes === mesNumero && item.ano === anoNumero,
+              ),
+            ),
+        );
       } catch {
         if (ativo) {
           setErro("Não foi possível carregar as unidades do condomínio.");

@@ -78,11 +78,16 @@ export async function GET(request: Request) {
 
       return NextResponse.json(
         {
-          fechado: await movimentoEstaFechado(
-            parsed.data.condominioId,
-            parsed.data.mes,
-            parsed.data.ano,
-          ),
+          fechado:
+            (await movimentoEstaFechado(
+              parsed.data.condominioId,
+              parsed.data.mes,
+              parsed.data.ano,
+            )) ||
+            fechados.some(
+              (item) =>
+                item.mes === parsed.data.mes && item.ano === parsed.data.ano,
+            ),
           fechados,
         },
         { headers: cabecalhosCors(request) },

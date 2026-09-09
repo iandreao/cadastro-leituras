@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma, prisma } from "@/lib/prisma";
+import { inteiroPeriodo, marcarFechado, mesmoPeriodo } from "@/lib/periodo";
 
 export const MENSAGEM_MES_FECHADO =
   "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
@@ -9,36 +10,92 @@ export type PeriodoFechado = {
   ano: number;
 };
 
+async function buscarMovimentoSql(
+  condominioId: string,
+  mes: number,
+  ano: number,
+) {
+  return getPrisma().$queryRaw<Array<{ fechado: unknown; mes: number; ano: number }>>`
+    SELECT "fechado", "mes", "ano"
+    FROM "MovimentoMensal"
+    WHERE "condominioId" = ${condominioId}
+      AND "mes" = ${mes}
+      AND "ano" = ${ano}
+    LIMIT 1
+  `;
+}
+
 export async function listarPeriodosFechados(condominioId: string) {
   try {
-    const periodos = await prisma.movimentoMensal.findMany({
-      where: { condominioId, fechado: true },
-      select: { mes: true, ano: true },
-      orderBy: [{ ano: "desc" }, { mes: "desc" }],
-    });
+    const linhas = await getPrisma().$queryRaw<
+      Array<{ mes: number; ano: number; fechado: unknown }>
+    >`
+      SELECT "mes", "ano", "fechado"
+      FROM "MovimentoMensal"
+      WHERE "condominioId" = ${condominioId}
+        AND "fechado" = true
+      ORDER BY "ano" DESC, "mes" DESC
+    `;
 
-    return periodos ?? [];
+    return (linhas ?? [])
+      .filter((linha) => marcarFechado(linha.fechado))
+      .map((linha) => ({
+        mes: inteiroPeriodo(linha.mes),
+        ano: inteiroPeriodo(linha.ano),
+      }))
+      .filter((linha) => Number.isInteger(linha.mes) && Number.isInteger(linha.ano));
   } catch (error) {
-    console.error("[movimento] listarPeriodosFechados", error);
-    return [];
+    console.error("[movimento] listarPeriodosFechados SQL", error);
+
+    try {
+      const periodos = await prisma.movimentoMensal.findMany({
+        where: { condominioId, fechado: true },
+        select: { mes: true, ano: true },
+        orderBy: [{ ano: "desc" }, { mes: "desc" }],
+      });
+
+      return periodos ?? [];
+    } catch (fallbackError) {
+      console.error("[movimento] listarPeriodosFechados prisma", fallbackError);
+      return [];
+    }
   }
 }
 
 export async function movimentoEstaFechado(
   condominioId: string,
-  mes: number,
-  ano: number,
+  mes: number | string,
+  ano: number | string,
 ) {
+  const mesN = inteiroPeriodo(mes);
+  const anoN = inteiroPeriodo(ano);
+
+  if (!condominioId || !Number.isInteger(mesN) || !Number.isInteger(anoN)) {
+    return false;
+  }
+
   try {
-    const registro = await prisma.movimentoMensal.findUnique({
-      where: {
-        condominioId_mes_ano: { condominioId, mes, ano },
-      },
-      select: { fechado: true },
+    const linhas = await buscarMovimentoSql(condominioId, mesN, anoN);
+    if (linhas?.length) {
+      return marcarFechado(linhas[0]?.fechado);
+    }
+  } catch (error) {
+    console.error("[movimento] consulta SQL de fechamento", error);
+  }
+
+  try {
+    const registro = await getPrisma().movimentoMensal.findFirst({
+      where: { condominioId, mes: mesN, ano: anoN },
+      select: { fechado: true, mes: true, ano: true },
     });
 
-    return Boolean(registro?.fechado);
-  } catch {
+    return Boolean(
+      registro &&
+        mesmoPeriodo(registro.mes, registro.ano, mesN, anoN) &&
+        marcarFechado(registro.fechado),
+    );
+  } catch (error) {
+    console.error("[movimento] consulta Prisma de fechamento", error);
     return false;
   }
 }
@@ -49,35 +106,39 @@ export async function definirMovimentoFechado(
   ano: number,
   fechado: boolean,
 ) {
+  const mesN = inteiroPeriodo(mes);
+  const anoN = inteiroPeriodo(ano);
   const client = getPrisma();
   const repo = client.movimentoMensal;
 
   console.log("[movimento] gravar MovimentoMensal", {
     condominioId,
-    mes,
-    ano,
+    mes: mesN,
+    ano: anoN,
     fechado,
     temUpsert: typeof repo?.upsert === "function",
   });
 
   if (typeof repo?.upsert === "function") {
-    return repo.upsert({
+    const gravado = await repo.upsert({
       where: {
-        condominioId_mes_ano: { condominioId, mes, ano },
+        condominioId_mes_ano: { condominioId, mes: mesN, ano: anoN },
       },
       update: { fechado },
-      create: { condominioId, mes, ano, fechado },
+      create: { condominioId, mes: mesN, ano: anoN, fechado },
     });
+
+    return gravado;
   }
 
   await client.$executeRaw`
     INSERT INTO "MovimentoMensal" ("id", "condominioId", "mes", "ano", "fechado", "createdAt", "updatedAt")
-    VALUES (${crypto.randomUUID()}, ${condominioId}, ${mes}, ${ano}, ${fechado}, NOW(), NOW())
+    VALUES (${crypto.randomUUID()}, ${condominioId}, ${mesN}, ${anoN}, ${fechado}, NOW(), NOW())
     ON CONFLICT ("condominioId", "mes", "ano")
     DO UPDATE SET "fechado" = ${fechado}, "updatedAt" = NOW()
   `;
 
-  return { condominioId, mes, ano, fechado };
+  return { condominioId, mes: mesN, ano: anoN, fechado };
 }
 
 export async function falhaSeMovimentoFechado(
