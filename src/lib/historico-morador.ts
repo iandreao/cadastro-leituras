@@ -223,6 +223,65 @@ export async function garantirHistoricoInicial(unidade: UnidadeMoradorAtual) {
   });
 }
 
+export function escolherMoradorNaCompetencia(
+  registros: Array<{
+    nomeMorador: string;
+    celular: string;
+    email?: string;
+    dataEntrada: Date | string;
+    dataSaida?: Date | string | null;
+  }>,
+  mes: number,
+  ano: number,
+): MoradorPeriodo | null {
+  if (registros.length === 0) {
+    return null;
+  }
+
+  const { inicio, fim } = limitesCompetencia(mes, ano);
+  const competencia = chaveCompetencia(mes, ano);
+  const linhas = registros.map((linha) => ({
+    nomeMorador: linha.nomeMorador,
+    celular: linha.celular,
+    email: linha.email ?? "",
+    dataEntrada: new Date(linha.dataEntrada),
+    dataSaida: linha.dataSaida ? new Date(linha.dataSaida) : null,
+  }));
+
+  const vigentes = linhas.filter((linha) => {
+    const noMes =
+      linha.dataEntrada <= fim &&
+      (linha.dataSaida == null || linha.dataSaida >= inicio);
+    return noMes || ocupaCompetencia(linha, mes, ano);
+  });
+
+  vigentes.sort((a, b) => b.dataEntrada.getTime() - a.dataEntrada.getTime());
+
+  let escolhido = vigentes[0];
+
+  if (!escolhido) {
+    const primeiro = linhas[0];
+    const entradaMes = anoMesBrasil(primeiro.dataEntrada);
+    const saidaMes = primeiro.dataSaida
+      ? anoMesBrasil(primeiro.dataSaida)
+      : Number.POSITIVE_INFINITY;
+
+    if (competencia < entradaMes && saidaMes >= competencia) {
+      escolhido = primeiro;
+    }
+  }
+
+  if (!escolhido) {
+    return null;
+  }
+
+  return {
+    nomeMorador: escolhido.nomeMorador,
+    celular: escolhido.celular,
+    email: escolhido.email,
+  };
+}
+
 export async function buscarMoradoresNaCompetencia(
   unidadeIds: string[],
   mes: number,
@@ -234,8 +293,7 @@ export async function buscarMoradoresNaCompetencia(
     return mapa;
   }
 
-  const { inicio, fim } = limitesCompetencia(mes, ano);
-  const competencia = chaveCompetencia(mes, ano);
+  const { fim } = limitesCompetencia(mes, ano);
 
   try {
     const linhas = await getPrisma().$queryRaw<HistoricoLinha[]>`
@@ -260,38 +318,10 @@ export async function buscarMoradoresNaCompetencia(
     }
 
     for (const [unidadeId, registros] of porUnidade) {
-      const vigentes = registros.filter((linha) => {
-        const noMes =
-          linha.dataEntrada <= fim &&
-          (linha.dataSaida == null || linha.dataSaida >= inicio);
-        const noMesCalendario = ocupaCompetencia(linha, mes, ano);
-        return noMes || noMesCalendario;
-      });
-
-      vigentes.sort(
-        (a, b) => b.dataEntrada.getTime() - a.dataEntrada.getTime(),
-      );
-
-      let escolhido = vigentes[0];
-
-      if (!escolhido) {
-        const primeiro = registros[0];
-        const entradaMes = anoMesBrasil(primeiro.dataEntrada);
-        const saidaMes = primeiro.dataSaida
-          ? anoMesBrasil(primeiro.dataSaida)
-          : Number.POSITIVE_INFINITY;
-
-        if (competencia < entradaMes && saidaMes >= competencia) {
-          escolhido = primeiro;
-        }
-      }
+      const escolhido = escolherMoradorNaCompetencia(registros, mes, ano);
 
       if (escolhido) {
-        mapa.set(unidadeId, {
-          nomeMorador: escolhido.nomeMorador,
-          celular: escolhido.celular,
-          email: escolhido.email,
-        });
+        mapa.set(unidadeId, escolhido);
       }
     }
   } catch (error) {

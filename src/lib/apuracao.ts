@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { buscarMoradoresNaCompetencia } from "@/lib/historico-morador";
+import { escolherMoradorNaCompetencia } from "@/lib/historico-morador";
+import { limitesCompetencia } from "@/lib/periodo";
+import { movimentoEstaFechado } from "@/lib/movimento";
 import {
   consumoGasInconsistente,
   consumoM3,
   mensagemConsumoGasInconsistente,
   rotuloUnidade,
 } from "@/lib/leituras";
-import { movimentoEstaFechado } from "@/lib/movimento";
 
 export const TIPO_UNIDADE_CONDOMINIO = "Condomínio";
 export const TIPO_AGUA_FIXO = "Água Condominio";
@@ -53,6 +54,14 @@ type LeituraPeriodo = {
   valorGas: number | null;
 };
 
+type HistoricoMoradorApuracao = {
+  nomeMorador: string;
+  celular: string;
+  email?: string;
+  dataEntrada: Date;
+  dataSaida: Date | null;
+};
+
 type UnidadeApuracao = {
   id: string;
   numero: string;
@@ -63,6 +72,7 @@ type UnidadeApuracao = {
   tipoUnidade: TipoUnidadeRelacao;
   bloco: { id: string; nome: string };
   leituras?: LeituraPeriodo[];
+  historicoMoradores?: HistoricoMoradorApuracao[];
 };
 
 type DespesaApuracao = {
@@ -233,6 +243,172 @@ function indexarLeiturasPorPeriodo(
   return { atual, previa };
 }
 
+async function carregarPacoteApuracao(
+  condominioId: string,
+  mes: number,
+  ano: number,
+) {
+  const { fim } = limitesCompetencia(mes, ano);
+
+  return prisma.condominio.findFirst({
+    where: { id: condominioId },
+    relationLoadStrategy: "join",
+    select: {
+      id: true,
+      despesasMensais: {
+        where: { mes, ano },
+        orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+        select: {
+          blocoId: true,
+          valorTotal: true,
+          valorFixo: true,
+          valorVariavel: true,
+          formaCobranca: true,
+          tipoDespesaId: true,
+          tipoDespesa: {
+            select: { id: true, nome: true },
+          },
+          bloco: {
+            select: { nome: true },
+          },
+        },
+      },
+      tiposDespesa: {
+        select: {
+          regras: {
+            select: {
+              tipoUnidadeId: true,
+              tipoDespesaId: true,
+            },
+          },
+        },
+      },
+      unidades: {
+        orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
+        select: {
+          id: true,
+          numero: true,
+          blocoId: true,
+          tipoUnidadeId: true,
+          nomeMorador: true,
+          celular: true,
+          tipoUnidade: {
+            select: { id: true, nome: true },
+          },
+          bloco: {
+            select: { id: true, nome: true },
+          },
+          leituras: {
+            where: filtroLeiturasCompetencia(mes, ano),
+            select: {
+              mes: true,
+              ano: true,
+              valorAgua: true,
+              valorGas: true,
+            },
+          },
+          historicoMoradores: {
+            where: { dataEntrada: { lte: fim } },
+            orderBy: { dataEntrada: "asc" },
+            select: {
+              nomeMorador: true,
+              celular: true,
+              email: true,
+              dataEntrada: true,
+              dataSaida: true,
+            },
+          },
+          faturas: {
+            where: { mes, ano },
+            take: 1,
+            select: {
+              id: true,
+              unidadeId: true,
+              mes: true,
+              ano: true,
+              valorAgua: true,
+              valorEnergia: true,
+              valorGas: true,
+              valorOutras: true,
+              valorTotal: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+type PacoteApuracao = NonNullable<Awaited<ReturnType<typeof carregarPacoteApuracao>>>;
+
+function mapearDespesasPeriodo(
+  despesas: PacoteApuracao["despesasMensais"],
+): DespesaPeriodoApuracao[] {
+  return despesas.map((despesa) => {
+    const nomeTipo = despesa.tipoDespesa?.nome ?? "";
+    const tipo = classificarDespesa(nomeTipo);
+
+    return {
+      nome: nomeTipo,
+      bloco: despesa.bloco?.nome ?? "",
+      formaCobranca: despesa.formaCobranca ?? "",
+      classificacao: classificacaoResumo(tipo),
+      valorTotal: Number(despesa.valorTotal ?? 0),
+    };
+  });
+}
+
+function montarFaturasSalvasDoPacote(
+  pacote: PacoteApuracao,
+  mes: number,
+  ano: number,
+) {
+  const unidades = pacote.unidades.filter(
+    (unidade) => !ehUnidadeCondominio(unidade) && unidade.faturas[0],
+  );
+  const { atual, previa } = indexarLeiturasPorPeriodo(
+    unidades.flatMap((unidade) =>
+      (unidade.leituras ?? []).map((leitura) => ({
+        ...leitura,
+        unidadeId: unidade.id,
+      })),
+    ),
+    mes,
+    ano,
+  );
+  const consumos = consumosDasLeituras(
+    unidades.map((unidade) => unidade.id),
+    atual,
+    previa,
+  );
+
+  return unidades.map((unidade) => {
+    const fatura = unidade.faturas[0];
+    const morador = escolherMoradorNaCompetencia(
+      unidade.historicoMoradores ?? [],
+      mes,
+      ano,
+    );
+
+    return {
+      ...fatura,
+      unidade: {
+        id: unidade.id,
+        numero: unidade.numero,
+        blocoId: unidade.blocoId,
+        nomeMorador: morador?.nomeMorador ?? unidade.nomeMorador ?? "",
+        celular: morador?.celular ?? unidade.celular ?? "",
+        bloco: unidade.bloco,
+        tipoUnidade: {
+          nome: unidade.tipoUnidade.nome,
+        },
+      },
+      consumoAguaM3: consumos.agua.get(unidade.id) ?? 0,
+      consumoGasM3: consumos.gas.get(unidade.id) ?? 0,
+    };
+  });
+}
+
 function consumosDasLeituras(
   unidadeIds: string[],
   atual: Map<string, LeituraPeriodo>,
@@ -382,160 +558,48 @@ export async function listarFaturasApuracao(
   mes: number,
   ano: number,
 ) {
-  const faturas = await prisma.faturaUnidade.findMany({
-    where: {
-      mes,
-      ano,
-      unidade: {
-        condominioId,
-        tipoUnidade: {
-          nome: { not: TIPO_UNIDADE_CONDOMINIO },
-        },
-      },
-    },
-    orderBy: [{ unidade: { bloco: { nome: "asc" } } }, { unidade: { numero: "asc" } }],
-    include: {
-      unidade: {
-        select: {
-          id: true,
-          numero: true,
-          blocoId: true,
-          nomeMorador: true,
-          celular: true,
-          bloco: {
-            select: { id: true, nome: true },
-          },
-          tipoUnidade: {
-            select: {
-              nome: true,
-            },
-          },
-          leituras: {
-            where: filtroLeiturasCompetencia(mes, ano),
-            select: {
-              mes: true,
-              ano: true,
-              valorAgua: true,
-              valorGas: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const pacote = await carregarPacoteApuracao(condominioId, mes, ano);
 
-  const unidadeIds = faturas.map((fatura) => fatura.unidadeId);
-  const { atual, previa } = indexarLeiturasPorPeriodo(
-    faturas.flatMap((fatura) =>
-      (fatura.unidade.leituras ?? []).map((leitura) => ({
-        ...leitura,
-        unidadeId: fatura.unidadeId,
-      })),
-    ),
-    mes,
-    ano,
-  );
-  const consumos = consumosDasLeituras(unidadeIds, atual, previa);
-  const moradores = await buscarMoradoresNaCompetencia(unidadeIds, mes, ano);
+  if (!pacote) {
+    return [];
+  }
 
-  return faturas.map((fatura) => {
-    const { leituras: _ignoradas, ...unidade } = fatura.unidade;
-    const morador = moradores.get(fatura.unidadeId);
-
-    return {
-      ...fatura,
-      unidade: {
-        ...unidade,
-        nomeMorador: morador ? morador.nomeMorador : unidade.nomeMorador,
-        celular: morador ? morador.celular : unidade.celular,
-      },
-      consumoAguaM3: consumos.agua.get(fatura.unidadeId) ?? 0,
-      consumoGasM3: consumos.gas.get(fatura.unidadeId) ?? 0,
-    };
-  });
+  return montarFaturasSalvasDoPacote(pacote, mes, ano);
 }
 
 export async function processarApuracao(
   condominioId: string,
   mes: number,
   ano: number,
-  opcoes?: { persistir?: boolean },
+  opcoes?: {
+    persistir?: boolean;
+    pacote?: PacoteApuracao;
+    recusarSeFechado?: boolean;
+  },
 ) {
   const persistir = opcoes?.persistir !== false;
-  const anterior = periodoAnterior(mes, ano);
 
-  const [condominio, unidades, despesas, registrosRegras] = await Promise.all([
-    prisma.condominio.findUnique({
-      where: { id: condominioId },
-      select: { id: true },
-    }),
-    prisma.unidade.findMany({
-      where: { condominioId },
-      orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
-      select: {
-        id: true,
-        numero: true,
-        blocoId: true,
-        tipoUnidadeId: true,
-        nomeMorador: true,
-        celular: true,
-        tipoUnidade: {
-          select: {
-            id: true,
-            nome: true,
-          },
-        },
-        bloco: {
-          select: {
-            id: true,
-            nome: true,
-          },
-        },
-        leituras: {
-          where: {
-            OR: [
-              { mes, ano },
-              { mes: anterior.mes, ano: anterior.ano },
-            ],
-          },
-          select: {
-            mes: true,
-            ano: true,
-            valorAgua: true,
-            valorGas: true,
-          },
-        },
-      },
-    }),
-    prisma.despesaMensal.findMany({
-      where: { condominioId, mes, ano },
-      include: {
-        tipoDespesa: {
-          select: {
-            id: true,
-            nome: true,
-          },
-        },
-        bloco: {
-          select: { nome: true },
-        },
-      },
-    }),
-    prisma.regraParticipacao.findMany({
-      where: {
-        tipoUnidade: { condominioId },
-        tipoDespesa: { condominioId },
-      },
-      select: {
-        tipoUnidadeId: true,
-        tipoDespesaId: true,
-      },
-    }),
-  ]);
+  if (
+    opcoes?.recusarSeFechado &&
+    (await movimentoEstaFechado(condominioId, mes, ano))
+  ) {
+    return {
+      error:
+        "O movimento deste mês está fechado. Reabra o movimento para recalcular a apuração.",
+      status: 409 as const,
+    };
+  }
+
+  const condominio =
+    opcoes?.pacote ?? (await carregarPacoteApuracao(condominioId, mes, ano));
 
   if (!condominio) {
     return { error: "Condomínio não encontrado.", status: 404 as const };
   }
+
+  const unidades = condominio.unidades;
+  const despesas = condominio.despesasMensais;
+  const registrosRegras = condominio.tiposDespesa.flatMap((tipo) => tipo.regras);
 
   if (unidades.length === 0) {
     return {
@@ -702,11 +766,6 @@ export async function processarApuracao(
     leiturasMes,
     leiturasMesAnterior,
   ).gas;
-  const moradores = await buscarMoradoresNaCompetencia(
-    unidadesPrivativas.map((unidade) => unidade.id),
-    mes,
-    ano,
-  );
 
   const faturas = unidadesPrivativas.map((unidade) => {
     const atual = valores.get(unidade.id) ?? valoresZerados();
@@ -717,7 +776,11 @@ export async function processarApuracao(
     const valorTotal = arredondarMoeda(
       valorAgua + valorEnergia + valorGas + valorOutras,
     );
-    const morador = moradores.get(unidade.id);
+    const morador = escolherMoradorNaCompetencia(
+      unidade.historicoMoradores ?? [],
+      mes,
+      ano,
+    );
 
     return {
       id: `${unidade.id}-${mes}-${ano}`,
@@ -772,18 +835,7 @@ export async function processarApuracao(
     });
   }
 
-  const despesasPeriodo = despesas.map((despesa) => {
-    const nomeTipo = despesa.tipoDespesa?.nome ?? "";
-    const tipo = classificarDespesa(nomeTipo);
-
-    return {
-      nome: nomeTipo,
-      bloco: despesa.bloco?.nome ?? "",
-      formaCobranca: despesa.formaCobranca ?? "",
-      classificacao: classificacaoResumo(tipo),
-      valorTotal: Number(despesa.valorTotal ?? 0),
-    };
-  });
+  const despesasPeriodo = mapearDespesasPeriodo(despesas);
   const resumo: ResumoApuracao = montarResumoDeFaturas(
     faturas,
     valorM3Agua,
@@ -841,24 +893,36 @@ export async function carregarApuracaoPeriodo(
   mes: number,
   ano: number,
 ) {
+  const pacote = await carregarPacoteApuracao(condominioId, mes, ano);
+
+  if (!pacote) {
+    return {
+      movimento: { fechado: false as const },
+      faturas: [] as Awaited<ReturnType<typeof listarFaturasApuracao>>,
+      despesasPeriodo: [] as Awaited<ReturnType<typeof listarDespesasPeriodo>>,
+      resumo: null,
+      error: "Condomínio não encontrado.",
+      status: 404 as const,
+    };
+  }
+
   const fechado = await movimentoEstaFechado(condominioId, mes, ano);
 
   if (fechado) {
-    const [faturas, despesasPeriodo] = await Promise.all([
-      listarFaturasApuracao(condominioId, mes, ano),
-      listarDespesasPeriodo(condominioId, mes, ano),
-    ]);
+    const faturas = montarFaturasSalvasDoPacote(pacote, mes, ano);
+    const despesasPeriodo = mapearDespesasPeriodo(pacote.despesasMensais);
 
     return {
       movimento: { fechado: true as const },
-      faturas: faturas ?? [],
-      despesasPeriodo: despesasPeriodo ?? [],
+      faturas,
+      despesasPeriodo,
       resumo: faturas.length > 0 ? montarResumoDeFaturas(faturas) : null,
     };
   }
 
   const resultado = await processarApuracao(condominioId, mes, ano, {
     persistir: false,
+    pacote,
   });
 
   if ("error" in resultado) {

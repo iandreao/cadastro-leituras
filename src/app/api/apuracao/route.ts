@@ -4,7 +4,6 @@ import {
   carregarApuracaoPeriodo,
   processarApuracao,
 } from "@/lib/apuracao";
-import { movimentoEstaFechado } from "@/lib/movimento";
 import { apuracaoSchema } from "@/lib/validations";
 
 function mensagemErro(error: unknown, fallback: string) {
@@ -111,26 +110,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      await movimentoEstaFechado(
-        parsed.data.condominioId,
-        parsed.data.mes,
-        parsed.data.ano,
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "O movimento deste mês está fechado. Reabra o movimento para recalcular a apuração.",
-        },
-        { status: 409 },
-      );
-    }
-
     const resultado = await processarApuracao(
       parsed.data.condominioId,
       parsed.data.mes,
       parsed.data.ano,
+      { recusarSeFechado: true },
     );
 
     if ("error" in resultado) {
