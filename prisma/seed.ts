@@ -725,6 +725,135 @@ async function garantirUsuarioAdmin() {
   });
 }
 
+const GESTOR_ALFA_ID = "gestor-teste-alfa";
+const GESTOR_BETA_ID = "gestor-teste-beta";
+const SENHA_TESTE_ISOLAMENTO = "123456";
+const CNPJ_GESTOR_ALFA = "12345678000195";
+const CNPJ_GESTOR_BETA = "98765432000198";
+const CNPJ_RESIDENCIAL_SOL = "11222333000181";
+const CNPJ_RESIDENCIAL_LUA = "22333444000181";
+
+async function garantirCenariosIsolamento() {
+  const senha = await bcrypt.hash(SENHA_TESTE_ISOLAMENTO, 10);
+
+  const alfa = await prisma.gestor.upsert({
+    where: { id: GESTOR_ALFA_ID },
+    update: {
+      nomeFantasia: "Administradora Alfa",
+      razaoSocial: "Administradora Alfa Ltda",
+      cnpj: CNPJ_GESTOR_ALFA,
+      ativo: true,
+    },
+    create: {
+      id: GESTOR_ALFA_ID,
+      nomeFantasia: "Administradora Alfa",
+      razaoSocial: "Administradora Alfa Ltda",
+      cnpj: CNPJ_GESTOR_ALFA,
+    },
+  });
+
+  const beta = await prisma.gestor.upsert({
+    where: { id: GESTOR_BETA_ID },
+    update: {
+      nomeFantasia: "Administradora Beta",
+      razaoSocial: "Administradora Beta Ltda",
+      cnpj: CNPJ_GESTOR_BETA,
+      ativo: true,
+    },
+    create: {
+      id: GESTOR_BETA_ID,
+      nomeFantasia: "Administradora Beta",
+      razaoSocial: "Administradora Beta Ltda",
+      cnpj: CNPJ_GESTOR_BETA,
+    },
+  });
+
+  await prisma.usuario.upsert({
+    where: { email: "alfa@condosys.com" },
+    update: {
+      nome: "Gestor Alfa",
+      senha,
+      role: "GESTOR_ADMIN",
+      gestorId: alfa.id,
+    },
+    create: {
+      nome: "Gestor Alfa",
+      email: "alfa@condosys.com",
+      senha,
+      role: "GESTOR_ADMIN",
+      gestorId: alfa.id,
+    },
+  });
+
+  await prisma.usuario.upsert({
+    where: { email: "beta@condosys.com" },
+    update: {
+      nome: "Gestor Beta",
+      senha,
+      role: "GESTOR_ADMIN",
+      gestorId: beta.id,
+    },
+    create: {
+      nome: "Gestor Beta",
+      email: "beta@condosys.com",
+      senha,
+      role: "GESTOR_ADMIN",
+      gestorId: beta.id,
+    },
+  });
+
+  const sol = await prisma.condominio.upsert({
+    where: { cnpj: CNPJ_RESIDENCIAL_SOL },
+    update: {
+      nome: "Residencial Sol",
+      endereco: "Rua das Palmeiras, 100",
+      email: "contato@residencialsol.com",
+      celular: "11988880001",
+      gestorId: alfa.id,
+    },
+    create: {
+      cnpj: CNPJ_RESIDENCIAL_SOL,
+      nome: "Residencial Sol",
+      endereco: "Rua das Palmeiras, 100",
+      email: "contato@residencialsol.com",
+      celular: "11988880001",
+      gestorId: alfa.id,
+    },
+  });
+
+  const lua = await prisma.condominio.upsert({
+    where: { cnpj: CNPJ_RESIDENCIAL_LUA },
+    update: {
+      nome: "Residencial Lua",
+      endereco: "Avenida das Estrelas, 200",
+      email: "contato@residenciallua.com",
+      celular: "11988880002",
+      gestorId: beta.id,
+    },
+    create: {
+      cnpj: CNPJ_RESIDENCIAL_LUA,
+      nome: "Residencial Lua",
+      endereco: "Avenida das Estrelas, 200",
+      email: "contato@residenciallua.com",
+      celular: "11988880002",
+      gestorId: beta.id,
+    },
+  });
+
+  console.log("Cenários de isolamento gravados", {
+    alfa: {
+      gestor: alfa.nomeFantasia,
+      usuario: "alfa@condosys.com",
+      condominio: sol.nome,
+    },
+    beta: {
+      gestor: beta.nomeFantasia,
+      usuario: "beta@condosys.com",
+      condominio: lua.nome,
+    },
+  });
+}
+
 async function main() {
   await garantirUsuarioAdmin();
   await migrarColunasAntigas();
@@ -732,6 +861,7 @@ async function main() {
   await migrarEscopoBloco();
   await migrarModeloBlocoRelacional();
   await removerIndicesUnicosObsoletosDeTipos();
+  await garantirCenariosIsolamento();
 
   const condominios = await prisma.condominio.findMany({
     select: { id: true },
