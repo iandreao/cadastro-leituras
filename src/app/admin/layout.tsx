@@ -16,7 +16,7 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  if (session.role !== "SUPER_ADMIN") {
+  if (session.role !== "SUPER_ADMIN" && session.role !== "GESTOR_ADMIN") {
     redirect("/condominios");
   }
 

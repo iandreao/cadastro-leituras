@@ -53,7 +53,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (pathname.startsWith("/admin") && role && role !== "SUPER_ADMIN") {
+  if (pathname.startsWith("/admin/gestores") && role && role !== "SUPER_ADMIN") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/usuarios";
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith("/admin") && role === "OPERADOR") {
     const url = request.nextUrl.clone();
     url.pathname = "/condominios";
     return NextResponse.redirect(url);

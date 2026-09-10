@@ -15,6 +15,11 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
   { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
   { href: "/apuracao", label: "Apurar Despesas do Mês" },
   {
+    href: "/admin/usuarios",
+    label: "Operadores / Usuários",
+    roles: ["SUPER_ADMIN", "GESTOR_ADMIN"],
+  },
+  {
     href: "/admin/gestores",
     label: "Gestores / Clientes",
     roles: ["SUPER_ADMIN"],
