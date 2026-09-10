@@ -4,7 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 
 export const GESTOR_PADRAO_ID = "default-master-gestor-id";
 export const GESTOR_PADRAO_NOME = "Administradora Master";
-export const SUPER_ADMIN_EMAIL = "admin@condosys.com";
+export const SUPER_ADMIN_EMAIL = "ivalinoandreao567@gmail.com";
 export const EMAILS_SUPER_ADMIN_INICIAIS = [
   SUPER_ADMIN_EMAIL,
   "iandreao1308@gmail.com",
