@@ -3,6 +3,7 @@ import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { tipoUnidadeSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,9 +20,9 @@ const MENSAGEM_EXCLUSAO_BLOQUEADA =
   "Não é possível excluir um tipo de unidade se existir uma unidade ou despesa correlacionada";
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -38,11 +39,25 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.tipoUnidade.findUnique({ where: { id } });
+    const atual = await prisma.tipoUnidade.findFirst({
+      where: { id, ...viaCondominio(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
         { error: "Tipo de unidade não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    const condominio = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
+
+    if (!condominio) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado." },
         { status: 404 },
       );
     }
@@ -96,9 +111,9 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -107,8 +122,8 @@ export async function DELETE(request: Request, context: RouteContext) {
   const condominioId = params.get("condominioId")?.trim();
   const blocoId = params.get("blocoId")?.trim();
 
-  const tipo = await prisma.tipoUnidade.findUnique({
-    where: { id },
+  const tipo = await prisma.tipoUnidade.findFirst({
+    where: { id, ...viaCondominio(session) },
     include: {
       _count: { select: { unidades: true } },
     },

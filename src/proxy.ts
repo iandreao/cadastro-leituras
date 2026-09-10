@@ -1,24 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { SESSION_COOKIE } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 
-async function hasValidSession(token?: string) {
+const SESSION_COOKIE = "sessao";
+
+async function sessaoDoPedido(token?: string) {
   if (!token || !process.env.AUTH_SECRET) {
-    return false;
+    return { autenticado: false, role: null as string | null };
   }
 
   try {
-    await jwtVerify(token, new TextEncoder().encode(process.env.AUTH_SECRET));
-    return true;
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(process.env.AUTH_SECRET),
+    );
+    return {
+      autenticado: true,
+      role: typeof payload.role === "string" ? payload.role : null,
+    };
   } catch {
-    return false;
+    return { autenticado: false, role: null as string | null };
   }
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const autenticado = await hasValidSession(token);
+  const { autenticado, role } = await sessaoDoPedido(token);
   const isLogin = pathname.startsWith("/login");
   const isEsqueceuSenha = pathname.startsWith("/esqueceu-senha");
   const isRedefinirSenha = pathname.startsWith("/redefinir-senha");
@@ -41,6 +48,12 @@ export async function proxy(request: NextRequest) {
   }
 
   if (autenticado && isLogin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/condominios";
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith("/admin") && role && role !== "SUPER_ADMIN") {
     const url = request.nextUrl.clone();
     url.pathname = "/condominios";
     return NextResponse.redirect(url);

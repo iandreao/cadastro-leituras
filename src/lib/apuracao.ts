@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import type { SessionUser } from "@/lib/auth";
 import { escolherMoradorNaCompetencia } from "@/lib/historico-morador";
 import { limitesCompetencia } from "@/lib/periodo";
 import { movimentoEstaFechado } from "@/lib/movimento";
+import { escopoTenant } from "@/lib/multi-tenant";
 import {
   consumoGasInconsistente,
   consumoM3,
@@ -247,11 +249,12 @@ async function carregarPacoteApuracao(
   condominioId: string,
   mes: number,
   ano: number,
+  session?: SessionUser | null,
 ) {
   const { fim } = limitesCompetencia(mes, ano);
 
   return prisma.condominio.findFirst({
-    where: { id: condominioId },
+    where: { id: condominioId, ...escopoTenant(session) },
     relationLoadStrategy: "join",
     select: {
       id: true,
@@ -440,10 +443,16 @@ export async function listarDespesasPeriodo(
   condominioId: string,
   mes: number,
   ano: number,
+  session?: SessionUser | null,
 ): Promise<DespesaPeriodoApuracao[]> {
   const despesas =
     (await prisma.despesaMensal.findMany({
-      where: { condominioId, mes, ano },
+      where: {
+        condominioId,
+        mes,
+        ano,
+        condominio: escopoTenant(session),
+      },
       include: {
         tipoDespesa: {
           select: { nome: true },
@@ -557,8 +566,9 @@ export async function listarFaturasApuracao(
   condominioId: string,
   mes: number,
   ano: number,
+  session?: SessionUser | null,
 ) {
-  const pacote = await carregarPacoteApuracao(condominioId, mes, ano);
+  const pacote = await carregarPacoteApuracao(condominioId, mes, ano, session);
 
   if (!pacote) {
     return [];
@@ -575,6 +585,7 @@ export async function processarApuracao(
     persistir?: boolean;
     pacote?: PacoteApuracao;
     recusarSeFechado?: boolean;
+    session?: SessionUser | null;
   },
 ) {
   const persistir = opcoes?.persistir !== false;
@@ -591,7 +602,8 @@ export async function processarApuracao(
   }
 
   const condominio =
-    opcoes?.pacote ?? (await carregarPacoteApuracao(condominioId, mes, ano));
+    opcoes?.pacote ??
+    (await carregarPacoteApuracao(condominioId, mes, ano, opcoes?.session));
 
   if (!condominio) {
     return { error: "Condomínio não encontrado.", status: 404 as const };
@@ -892,8 +904,9 @@ export async function carregarApuracaoPeriodo(
   condominioId: string,
   mes: number,
   ano: number,
+  session?: SessionUser | null,
 ) {
-  const pacote = await carregarPacoteApuracao(condominioId, mes, ano);
+  const pacote = await carregarPacoteApuracao(condominioId, mes, ano, session);
 
   if (!pacote) {
     return {
@@ -923,6 +936,7 @@ export async function carregarApuracaoPeriodo(
   const resultado = await processarApuracao(condominioId, mes, ano, {
     persistir: false,
     pacote,
+    session,
   });
 
   if ("error" in resultado) {

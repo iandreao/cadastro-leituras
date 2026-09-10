@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
 
-const itens = [
+const itens: { href: string; label: string; roles?: string[] }[] = [
   { href: "/condominios", label: "Incluir Condomínio" },
   { href: "/configuracoes/blocos", label: "Incluir Blocos / Torres" },
   { href: "/configuracoes/tipos-unidades", label: "Incluir Tipos de Unidade" },
@@ -14,10 +14,18 @@ const itens = [
   { href: "/leituras/agua", label: "Inserir Leitura de Água" },
   { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
   { href: "/apuracao", label: "Apurar Despesas do Mês" },
-  { href: "/admin/gestores", label: "Gestores / Clientes" },
+  {
+    href: "/admin/gestores",
+    label: "Gestores / Clientes",
+    roles: ["SUPER_ADMIN"],
+  },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  role = "OPERADOR",
+}: {
+  role?: string;
+}) {
   const pathname = usePathname();
   const { selecionado } = useCondominioSelecionado();
   const nomeCondominio = selecionado?.nome ?? "Selecione um Condomínio";
@@ -49,7 +57,9 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col space-y-1 overflow-y-auto px-3 py-2">
-          {itens.map((item) => {
+          {itens
+            .filter((item) => !item.roles || item.roles.includes(role))
+            .map((item) => {
             const ativo = pathname.startsWith(item.href);
 
             return (

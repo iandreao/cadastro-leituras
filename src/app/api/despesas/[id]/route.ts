@@ -3,13 +3,14 @@ import { persistirDespesaMensal } from "@/lib/despesas-mensal";
 import { respostaSeMovimentoFechado } from "@/lib/movimento";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
+import { viaCondominio } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -17,7 +18,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
   try {
     const body = await request.json();
-    const resultado = await persistirDespesaMensal(body, id);
+    const resultado = await persistirDespesaMensal(body, id, session);
 
     if (!resultado.ok) {
       return NextResponse.json(
@@ -36,16 +37,16 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const { id } = await context.params;
 
-  const despesa = await prisma.despesaMensal.findUnique({
-    where: { id },
+  const despesa = await prisma.despesaMensal.findFirst({
+    where: { id, ...viaCondominio(session) },
   });
 
   if (!despesa) {

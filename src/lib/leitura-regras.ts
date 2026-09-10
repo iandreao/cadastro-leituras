@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import type { SessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { viaCondominio } from "@/lib/multi-tenant";
 import {
   consumoGasInconsistente,
   consumoM3,
@@ -48,9 +50,13 @@ export async function validarLeituraUnidade(input: {
   valorAgua?: number | null;
   valorGas?: number | null;
   ignorarId?: string;
+  session?: SessionUser | null;
 }) {
-  const unidade = await prisma.unidade.findUnique({
-    where: { id: input.unidadeId },
+  const unidade = await prisma.unidade.findFirst({
+    where: {
+      id: input.unidadeId,
+      ...(input.session ? viaCondominio(input.session) : {}),
+    },
     include: {
       tipoUnidade: {
         select: { nome: true },

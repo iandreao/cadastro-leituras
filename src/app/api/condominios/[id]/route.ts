@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { condominioSchema } from "@/lib/validations";
+import { escopoTenant } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -27,7 +28,9 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.condominio.findUnique({ where: { id } });
+    const atual = await prisma.condominio.findFirst({
+      where: { id, ...escopoTenant(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
@@ -68,16 +71,16 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const { id } = await context.params;
 
-  const condominio = await prisma.condominio.findUnique({
-    where: { id },
+  const condominio = await prisma.condominio.findFirst({
+    where: { id, ...escopoTenant(session) },
     include: {
       unidades: {
         include: {

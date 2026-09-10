@@ -4,6 +4,8 @@ import { ehAguaPorConsumo } from "@/lib/despesas";
 import { falhaSeMovimentoFechado } from "@/lib/movimento";
 import { prisma } from "@/lib/prisma";
 import { despesaMensalSchema } from "@/lib/validations";
+import type { SessionUser } from "@/lib/auth";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 export const includeDespesa = {
   condominio: {
@@ -22,6 +24,7 @@ type Falha = { ok: false; error: string; status: number };
 export async function listarDespesasMensais(filtros: {
   condominioId?: string | null;
   blocoId?: string | null;
+  session: SessionUser;
 }) {
   const condominioId = filtros.condominioId?.trim() || undefined;
   const blocoId =
@@ -33,13 +36,18 @@ export async function listarDespesasMensais(filtros: {
     where: {
       ...(condominioId ? { condominioId } : {}),
       ...(blocoId !== undefined ? { blocoId } : {}),
+      ...viaCondominio(filtros.session),
     },
     orderBy: [{ ano: "desc" }, { mes: "desc" }, { createdAt: "desc" }],
     include: includeDespesa,
   });
 }
 
-export async function persistirDespesaMensal(body: unknown, id?: string) {
+export async function persistirDespesaMensal(
+  body: unknown,
+  id: string | undefined,
+  session: SessionUser,
+) {
   const parsed = despesaMensalSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -51,7 +59,12 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
   }
 
   if (id) {
-    const existente = await prisma.despesaMensal.findUnique({ where: { id } });
+    const existente = await prisma.despesaMensal.findFirst({
+      where: {
+        id,
+        ...viaCondominio(session),
+      },
+    });
 
     if (!existente) {
       return {
@@ -82,10 +95,7 @@ export async function persistirDespesaMensal(body: unknown, id?: string) {
   }
 
   const [condominio, tipoDespesa, resolvido] = await Promise.all([
-    prisma.condominio.findUnique({
-      where: { id: condominioId },
-      select: { id: true },
-    }),
+    buscarCondominioDoTenant(session, condominioId),
     prisma.tipoDespesa.findUnique({
       where: { id: tipoDespesaId },
       select: {

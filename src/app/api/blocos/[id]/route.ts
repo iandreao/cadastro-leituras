@@ -4,6 +4,7 @@ import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { blocoCadastroSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,9 +20,9 @@ const includeContagens = {
 } as const;
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -38,11 +39,25 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.bloco.findUnique({ where: { id } });
+    const atual = await prisma.bloco.findFirst({
+      where: { id, ...viaCondominio(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
         { error: "Bloco/torre não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    const condominio = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
+
+    if (!condominio) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado." },
         { status: 404 },
       );
     }
@@ -80,17 +95,17 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const { id } = await context.params;
   const condominioId = new URL(request.url).searchParams.get("condominioId")?.trim();
 
-  const bloco = await prisma.bloco.findUnique({
-    where: { id },
+  const bloco = await prisma.bloco.findFirst({
+    where: { id, ...viaCondominio(session) },
     include: includeContagens,
   });
 

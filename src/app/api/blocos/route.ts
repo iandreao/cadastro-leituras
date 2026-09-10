@@ -2,7 +2,9 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession } from "@/lib/auth";
 import { blocoCadastroSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 const includeBloco = {
   _count: {
@@ -16,6 +18,12 @@ const includeBloco = {
 } as const;
 
 export async function GET(request: Request) {
+  const { session, error } = await requireApiSession(request);
+
+  if (error || !session) {
+    return error;
+  }
+
   try {
     const condominioId =
       new URL(request.url).searchParams.get("condominioId")?.trim() ?? "";
@@ -27,8 +35,17 @@ export async function GET(request: Request) {
       );
     }
 
+    const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+    if (!condominio) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado." },
+        { status: 404 },
+      );
+    }
+
     const blocos = await prisma.bloco.findMany({
-      where: { condominioId },
+      where: { condominioId, ...viaCondominio(session) },
       orderBy: { nome: "asc" },
       include: includeBloco,
     });
@@ -43,6 +60,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const { session, error } = await requireApiSession(request);
+
+  if (error || !session) {
+    return error;
+  }
+
   try {
     const body = await request.json();
     const parsed = blocoCadastroSchema.safeParse(body);
@@ -59,6 +82,15 @@ export async function POST(request: Request) {
 
     if (!nome || !condominioId) {
       return NextResponse.json({ error: "Dados ausentes." }, { status: 400 });
+    }
+
+    const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+    if (!condominio) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado." },
+        { status: 404 },
+      );
     }
 
     const bloco = await prisma.bloco.create({

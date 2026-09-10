@@ -3,6 +3,7 @@ import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { tipoUnidadeSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 const includeTipo = {
   bloco: {
@@ -29,9 +30,9 @@ async function removerUnicoAntigoPorNomeECondominio() {
 }
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -45,6 +46,15 @@ export async function GET(request: Request) {
     );
   }
 
+  const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+  if (!condominio) {
+    return NextResponse.json(
+      { error: "Condomínio não encontrado." },
+      { status: 404 },
+    );
+  }
+
   const blocoId = params.get("blocoId")?.trim();
 
   if (!blocoId) {
@@ -55,7 +65,7 @@ export async function GET(request: Request) {
   }
 
   const tipos = await prisma.tipoUnidade.findMany({
-    where: { condominioId, blocoId },
+    where: { condominioId, blocoId, ...viaCondominio(session) },
     orderBy: { nome: "asc" },
     include: includeTipo,
   });
@@ -64,9 +74,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -96,9 +106,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: resolvido.error }, { status: 400 });
     }
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: data.condominioId },
-    });
+    const condominio = await buscarCondominioDoTenant(session, data.condominioId);
 
     if (!condominio) {
       return NextResponse.json(

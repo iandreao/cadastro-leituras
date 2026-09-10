@@ -54,6 +54,8 @@ export async function POST(request: Request) {
       sub: usuario.id,
       nome: usuario.nome,
       email: usuario.email,
+      role: usuario.role ?? "OPERADOR",
+      gestorId: usuario.gestorId ?? null,
     });
 
     return applySessionCookie(
@@ -62,6 +64,8 @@ export async function POST(request: Request) {
           id: usuario.id,
           nome: usuario.nome,
           email: usuario.email,
+          role: usuario.role ?? "OPERADOR",
+          gestorId: usuario.gestorId ?? null,
         },
       }),
       token,

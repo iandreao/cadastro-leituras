@@ -7,8 +7,8 @@ import {
   movimentoEstaFechado,
   type PeriodoFechado,
 } from "@/lib/movimento";
-import { prisma } from "@/lib/prisma";
 import { apuracaoSchema, movimentoSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant } from "@/lib/multi-tenant";
 
 function mensagemErro(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -46,9 +46,9 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -60,6 +60,15 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: "Selecione o condomínio.", fechado: false, fechados: [] },
         { status: 200, headers: cabecalhosCors(request) },
+      );
+    }
+
+    const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+    if (!condominio) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado.", fechado: false, fechados: [] },
+        { status: 404, headers: cabecalhosCors(request) },
       );
     }
 
@@ -108,9 +117,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -153,10 +162,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: parsed.data.condominioId },
-      select: { id: true },
-    });
+    const condominio = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
 
     if (!condominio) {
       return NextResponse.json(
@@ -174,6 +183,7 @@ export async function POST(request: Request) {
         parsed.data.condominioId,
         parsed.data.mes,
         parsed.data.ano,
+        { session },
       );
 
       if ("error" in resultado) {

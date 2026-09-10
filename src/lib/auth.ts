@@ -3,10 +3,14 @@ import { NextResponse } from "next/server";
 
 export const SESSION_COOKIE = "sessao";
 
+export type RoleSessao = "SUPER_ADMIN" | "GESTOR_ADMIN" | "OPERADOR";
+
 export type SessionUser = {
   sub: string;
   nome: string;
   email: string;
+  role: RoleSessao;
+  gestorId: string | null;
 };
 
 function getSecret() {
@@ -19,8 +23,21 @@ function getSecret() {
   return new TextEncoder().encode(secret);
 }
 
+function roleDaClaim(valor: unknown): RoleSessao | undefined {
+  if (valor === "SUPER_ADMIN" || valor === "GESTOR_ADMIN" || valor === "OPERADOR") {
+    return valor;
+  }
+
+  return undefined;
+}
+
 export async function createSessionToken(user: SessionUser) {
-  return new SignJWT({ nome: user.nome, email: user.email })
+  return new SignJWT({
+    nome: user.nome,
+    email: user.email,
+    role: user.role,
+    gestorId: user.gestorId,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.sub)
     .setIssuedAt()
@@ -42,6 +59,8 @@ export async function verifySessionToken(
       sub: payload.sub,
       nome: payload.nome,
       email: payload.email,
+      role: roleDaClaim(payload.role) ?? "OPERADOR",
+      gestorId: typeof payload.gestorId === "string" ? payload.gestorId : null,
     };
   } catch {
     return null;
@@ -97,5 +116,8 @@ export async function requireApiSession(request: Request) {
     };
   }
 
-  return { session, error: null };
+  const { completarSessaoTenant } = await import("@/lib/multi-tenant");
+  const completa = await completarSessaoTenant(session);
+
+  return { session: completa, error: null };
 }

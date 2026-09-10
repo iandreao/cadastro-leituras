@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth";
+import { requireApiSession, type SessionUser } from "@/lib/auth";
 import {
   buscarUltimaLeituraAnterior,
   validarLeituraUnidade,
@@ -18,6 +18,7 @@ import {
   respostaSeMovimentoFechado,
   respostaSePeriodoUnidadeFechado,
 } from "@/lib/movimento";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 const includeUnidade = {
   unidade: {
@@ -42,9 +43,9 @@ const includeUnidade = {
 } as const;
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -55,7 +56,10 @@ export async function GET(request: Request) {
   const leituras = await prisma.leitura.findMany({
     where: {
       ...(unidadeId ? { unidadeId } : {}),
-      ...(condominioId ? { unidade: { condominioId } } : {}),
+      unidade: {
+        ...(condominioId ? { condominioId } : {}),
+        ...viaCondominio(session),
+      },
     },
     orderBy: { createdAt: "desc" },
     select: {
@@ -71,9 +75,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as { itens?: unknown; tipo?: unknown };
 
     if (Array.isArray(body.itens) && (body.tipo === "agua" || body.tipo === "gas")) {
-      return salvarLote(body);
+      return salvarLote(body, session);
     }
 
     const parsed = leituraSchema.safeParse(body);
@@ -103,7 +107,10 @@ export async function POST(request: Request) {
       return periodoFechado;
     }
 
-    const validado = await validarLeituraUnidade(parsed.data);
+    const validado = await validarLeituraUnidade({
+      ...parsed.data,
+      session,
+    });
 
     if (validado.error) {
       return validado.error;
@@ -146,7 +153,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function salvarLote(body: unknown) {
+async function salvarLote(body: unknown, session: SessionUser) {
   const parsed = leituraLoteSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -157,6 +164,15 @@ async function salvarLote(body: unknown) {
   }
 
   const { condominioId, mes, ano, tipo, itens } = parsed.data;
+  const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+  if (!condominio) {
+    return NextResponse.json(
+      { error: "Condomínio não encontrado." },
+      { status: 404 },
+    );
+  }
+
   const periodoFechado = await respostaSeMovimentoFechado(
     condominioId,
     mes,
@@ -168,7 +184,7 @@ async function salvarLote(body: unknown) {
   }
 
   const unidades = await prisma.unidade.findMany({
-    where: { condominioId },
+    where: { condominioId, ...viaCondominio(session) },
     include: {
       tipoUnidade: {
         select: { nome: true },

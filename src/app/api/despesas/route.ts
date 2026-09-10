@@ -6,9 +6,9 @@ import {
 import { requireApiSession } from "@/lib/auth";
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -18,21 +18,25 @@ export async function GET(request: Request) {
     ? searchParams.get("blocoId")
     : null;
 
-  const despesas = await listarDespesasMensais({ condominioId, blocoId });
+  const despesas = await listarDespesasMensais({
+    condominioId,
+    blocoId,
+    session,
+  });
 
   return NextResponse.json(despesas);
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   try {
     const body = await request.json();
-    const resultado = await persistirDespesaMensal(body);
+    const resultado = await persistirDespesaMensal(body, undefined, session);
 
     if (!resultado.ok) {
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import { PrismaClient, Role } from "@prisma/client";
+import type { RoleSessao, SessionUser } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 
 export const GESTOR_PADRAO_ID = "default-master-gestor-id";
@@ -154,5 +155,76 @@ export async function promoverSuperAdminsConhecidos(
       role: Role.SUPER_ADMIN,
       gestorId: GESTOR_PADRAO_ID,
     },
+  });
+}
+
+const TENANT_INEXISTENTE = "__sem_gestor__";
+
+export function ehSuperAdmin(session: Pick<SessionUser, "role"> | null | undefined) {
+  return session?.role === "SUPER_ADMIN";
+}
+
+export function escopoTenant(
+  session: Pick<SessionUser, "role" | "gestorId"> | null | undefined,
+): { gestorId?: string } {
+  if (ehSuperAdmin(session)) {
+    return {};
+  }
+
+  const gestorId = session?.gestorId?.trim();
+
+  if (!gestorId) {
+    return { gestorId: TENANT_INEXISTENTE };
+  }
+
+  return { gestorId };
+}
+
+export function viaCondominio(
+  session: Pick<SessionUser, "role" | "gestorId"> | null | undefined,
+) {
+  return { condominio: escopoTenant(session) };
+}
+
+export function viaUnidadeDoTenant(
+  session: Pick<SessionUser, "role" | "gestorId"> | null | undefined,
+) {
+  return { unidade: viaCondominio(session) };
+}
+
+export async function completarSessaoTenant(session: SessionUser): Promise<SessionUser> {
+  try {
+    const usuario = await getPrisma().usuario.findUnique({
+      where: { id: session.sub },
+      select: { role: true, gestorId: true },
+    });
+
+    if (!usuario) {
+      return session;
+    }
+
+    return {
+      ...session,
+      role: usuario.role as RoleSessao,
+      gestorId: usuario.gestorId,
+    };
+  } catch {
+    return session;
+  }
+}
+
+export async function buscarCondominioDoTenant(
+  session: SessionUser,
+  condominioId: string | null | undefined,
+) {
+  const id = condominioId?.trim() ?? "";
+
+  if (!id) {
+    return null;
+  }
+
+  return getPrisma().condominio.findFirst({
+    where: { id, ...escopoTenant(session) },
+    select: { id: true, gestorId: true },
   });
 }

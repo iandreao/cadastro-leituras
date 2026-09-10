@@ -8,6 +8,7 @@ import { includeTipoUnidade } from "@/lib/unidades";
 import { unidadeTemVinculoDeExclusao } from "@/lib/unidade-exclusao";
 import { registrarMoradorNaUnidade } from "@/lib/historico-morador";
 import { unidadeSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,9 +20,9 @@ const includeUnidade = {
 } as const;
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -38,7 +39,9 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.unidade.findUnique({ where: { id } });
+    const atual = await prisma.unidade.findFirst({
+      where: { id, ...viaCondominio(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
@@ -47,9 +50,10 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: parsed.data.condominioId },
-    });
+    const condominio = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
 
     if (!condominio) {
       return NextResponse.json(
@@ -150,16 +154,16 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const { id } = await context.params;
 
-  const unidade = await prisma.unidade.findUnique({
-    where: { id },
+  const unidade = await prisma.unidade.findFirst({
+    where: { id, ...viaCondominio(session) },
     select: { id: true },
   });
 

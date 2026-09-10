@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolverBlocoDoCondominio } from "@/lib/blocos-db";
 import { prisma } from "@/lib/prisma";
-import { requireApiSession } from "@/lib/auth";
+import { requireApiSession, type SessionUser } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { includeTipoUnidade } from "@/lib/unidades";
 import { garantirHistoricoInicial } from "@/lib/historico-morador";
 import { invalidarCacheCadastro, listarUnidadesLeitura } from "@/lib/cache-cadastro";
 import { marcarBloqueioExclusaoUnidades } from "@/lib/unidade-exclusao";
 import { unidadeLoteSchema, unidadeSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 const includeUnidade = {
   condominio: {
@@ -17,9 +18,9 @@ const includeUnidade = {
 } as const;
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -28,12 +29,15 @@ export async function GET(request: Request) {
   const grade = searchParams.get("grade") === "1";
 
   if (grade && condominioId) {
-    const unidadesLeitura = await listarUnidadesLeitura(condominioId);
+    const unidadesLeitura = await listarUnidadesLeitura(condominioId, session);
     return NextResponse.json(unidadesLeitura);
   }
 
   const unidades = await prisma.unidade.findMany({
-    where: condominioId ? { condominioId } : undefined,
+    where: {
+      ...(condominioId ? { condominioId } : {}),
+      ...viaCondominio(session),
+    },
     orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
     select: {
       id: true,
@@ -56,9 +60,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as { numeros?: unknown };
 
     if (Array.isArray(body.numeros)) {
-      return criarLote(body);
+      return criarLote(body, session);
     }
 
     const parsed = unidadeSchema.safeParse(body);
@@ -78,9 +82,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: parsed.data.condominioId },
-    });
+    const condominio = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
 
     if (!condominio) {
       return NextResponse.json(
@@ -172,7 +177,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function criarLote(body: unknown) {
+async function criarLote(body: unknown, session: SessionUser) {
   const parsed = unidadeLoteSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -182,9 +187,10 @@ async function criarLote(body: unknown) {
     );
   }
 
-  const condominio = await prisma.condominio.findUnique({
-    where: { id: parsed.data.condominioId },
-  });
+  const condominio = await buscarCondominioDoTenant(
+    session,
+    parsed.data.condominioId,
+  );
 
   if (!condominio) {
     return NextResponse.json(

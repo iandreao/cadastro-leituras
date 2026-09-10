@@ -5,18 +5,21 @@ import { requireApiSession } from "@/lib/auth";
 import { garantirBlocoPadrao } from "@/lib/blocos-db";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { condominioSchema } from "@/lib/validations";
+import { ehSuperAdmin, escopoTenant, GESTOR_PADRAO_ID } from "@/lib/multi-tenant";
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const resumo = new URL(request.url).searchParams.get("resumo") === "1";
+  const where = escopoTenant(session);
 
   if (resumo) {
     const condominios = await prisma.condominio.findMany({
+      where,
       orderBy: { nome: "asc" },
       select: { id: true, nome: true },
     });
@@ -24,6 +27,7 @@ export async function GET(request: Request) {
   }
 
   const condominios = await prisma.condominio.findMany({
+    where,
     orderBy: { updatedAt: "desc" },
     include: {
       unidades: {
@@ -45,9 +49,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -59,6 +63,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
         { status: 400 },
+      );
+    }
+
+    const gestorId =
+      session.gestorId?.trim() || (ehSuperAdmin(session) ? GESTOR_PADRAO_ID : "");
+
+    if (!gestorId) {
+      return NextResponse.json(
+        { error: "Usuário sem gestor associado." },
+        { status: 403 },
       );
     }
 
@@ -79,6 +93,7 @@ export async function POST(request: Request) {
         endereco: toTitleCase(parsed.data.endereco),
         email: parsed.data.email.toLowerCase(),
         celular: onlyDigits(parsed.data.celular),
+        gestorId,
       },
     });
 

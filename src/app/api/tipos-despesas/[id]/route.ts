@@ -7,13 +7,14 @@ import {
   substituirRegrasParticipacao,
 } from "@/lib/regras-participacao";
 import { tipoDespesaConfigSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -30,11 +31,25 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.tipoDespesa.findUnique({ where: { id } });
+    const atual = await prisma.tipoDespesa.findFirst({
+      where: { id, ...viaCondominio(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
         { error: "Tipo de despesa não encontrado." },
+        { status: 404 },
+      );
+    }
+
+    const condominioAlvo = await buscarCondominioDoTenant(
+      session,
+      parsed.data.condominioId,
+    );
+
+    if (!condominioAlvo) {
+      return NextResponse.json(
+        { error: "Condomínio não encontrado." },
         { status: 404 },
       );
     }
@@ -103,9 +118,9 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -114,8 +129,8 @@ export async function DELETE(request: Request, context: RouteContext) {
   const condominioId = params.get("condominioId")?.trim();
   const blocoId = params.get("blocoId")?.trim();
 
-  const tipo = await prisma.tipoDespesa.findUnique({
-    where: { id },
+  const tipo = await prisma.tipoDespesa.findFirst({
+    where: { id, ...viaCondominio(session) },
     include: {
       _count: { select: { despesas: true } },
     },

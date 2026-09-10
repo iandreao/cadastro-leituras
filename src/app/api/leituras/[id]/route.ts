@@ -4,6 +4,7 @@ import { requireApiSession } from "@/lib/auth";
 import { leituraSchema } from "@/lib/validations";
 import { validarLeituraUnidade } from "@/lib/leitura-regras";
 import { respostaSePeriodoUnidadeFechado } from "@/lib/movimento";
+import { viaUnidadeDoTenant } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -30,9 +31,9 @@ const includeUnidade = {
 } as const;
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -49,7 +50,9 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const atual = await prisma.leitura.findUnique({ where: { id } });
+    const atual = await prisma.leitura.findFirst({
+      where: { id, ...viaUnidadeDoTenant(session) },
+    });
 
     if (!atual) {
       return NextResponse.json(
@@ -81,6 +84,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const validado = await validarLeituraUnidade({
       ...parsed.data,
       ignorarId: id,
+      session,
     });
 
     if (validado.error) {
@@ -126,14 +130,16 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
   const { id } = await context.params;
-  const leitura = await prisma.leitura.findUnique({ where: { id } });
+  const leitura = await prisma.leitura.findFirst({
+    where: { id, ...viaUnidadeDoTenant(session) },
+  });
 
   if (!leitura) {
     return NextResponse.json(

@@ -9,6 +9,7 @@ import {
   substituirRegrasParticipacao,
 } from "@/lib/regras-participacao";
 import { tipoDespesaConfigSchema } from "@/lib/validations";
+import { buscarCondominioDoTenant } from "@/lib/multi-tenant";
 
 async function removerUnicoAntigoPorNomeECondominio() {
   await prisma.$executeRawUnsafe(
@@ -26,9 +27,9 @@ async function removerUnicoAntigoPorNomeECondominio() {
 }
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -39,6 +40,15 @@ export async function GET(request: Request) {
     return NextResponse.json(
       { error: "Selecione o condomínio." },
       { status: 400 },
+    );
+  }
+
+  const condominio = await buscarCondominioDoTenant(session, condominioId);
+
+  if (!condominio) {
+    return NextResponse.json(
+      { error: "Condomínio não encontrado." },
+      { status: 404 },
     );
   }
 
@@ -57,9 +67,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -89,9 +99,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: resolvido.error }, { status: 400 });
     }
 
-    const condominio = await prisma.condominio.findUnique({
-      where: { id: data.condominioId },
-    });
+    const condominio = await buscarCondominioDoTenant(session, data.condominioId);
 
     if (!condominio) {
       return NextResponse.json(

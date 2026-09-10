@@ -1,7 +1,15 @@
+import type { SessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { viaUnidadeDoTenant } from "@/lib/multi-tenant";
 
-export async function limparLeituras() {
-  return prisma.leitura.deleteMany({});
+export async function limparLeituras(session?: SessionUser) {
+  if (!session) {
+    return prisma.leitura.deleteMany({});
+  }
+
+  return prisma.leitura.deleteMany({
+    where: viaUnidadeDoTenant(session),
+  });
 }
 
 async function main() {

@@ -30,9 +30,9 @@ function respostaApuracaoVazia(error?: string) {
 }
 
 export async function GET(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -62,6 +62,7 @@ export async function GET(request: Request) {
       parsed.data.condominioId,
       parsed.data.mes,
       parsed.data.ano,
+      session,
     );
     const corpo = {
       movimento: resultado.movimento ?? { fechado: false },
@@ -85,9 +86,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireApiSession(request);
+  const { session, error } = await requireApiSession(request);
 
-  if (error) {
+  if (error || !session) {
     return error;
   }
 
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
       parsed.data.condominioId,
       parsed.data.mes,
       parsed.data.ano,
-      { recusarSeFechado: true },
+      { recusarSeFechado: true, session },
     );
 
     if ("error" in resultado) {
