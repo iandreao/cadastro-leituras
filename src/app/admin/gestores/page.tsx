@@ -465,87 +465,25 @@ export default function GestoresPage() {
             />
           </label>
 
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              E-mail
-            </span>
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              autoComplete="off"
-              required
-              onChange={(event) =>
-                setForm((atual) => ({ ...atual, email: event.target.value }))
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Celular
-            </span>
-            <input
-              name="celular"
-              value={form.celular}
-              autoComplete="off"
-              inputMode="numeric"
-              placeholder="(00) 00000-0000"
-              onChange={(event) =>
-                setForm((atual) => ({
-                  ...atual,
-                  celular: maskCelular(event.target.value),
-                }))
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              CEP
-            </span>
-            <input
-              name="cep"
-              value={form.cep}
-              autoComplete="off"
-              inputMode="numeric"
-              placeholder="00000-000"
-              onChange={(event) =>
-                setForm((atual) => ({
-                  ...atual,
-                  cep: maskCep(event.target.value),
-                }))
-              }
-              onBlur={(event) => void consultarCep(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-          {consultandoCep ? (
-            <p className="text-lg font-medium text-teal-700">Consultando CEP...</p>
-          ) : null}
-
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Logradouro
-            </span>
-            <input
-              name="logradouro"
-              value={form.logradouro}
-              autoComplete="off"
-              onChange={(event) =>
-                setForm((atual) => ({
-                  ...atual,
-                  logradouro: event.target.value,
-                }))
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-
-          <div className="grid grid-cols-3 gap-3">
-            <label className="col-span-1 block">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <label className="block md:col-span-3">
+              <span className="mb-1 block text-lg font-medium text-slate-700">
+                Logradouro
+              </span>
+              <input
+                name="logradouro"
+                value={form.logradouro}
+                autoComplete="off"
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    logradouro: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              />
+            </label>
+            <label className="block md:col-span-1">
               <span className="mb-1 block text-lg font-medium text-slate-700">
                 Número
               </span>
@@ -559,7 +497,10 @@ export default function GestoresPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
               />
             </label>
-            <label className="col-span-2 block">
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label className="block">
               <span className="mb-1 block text-lg font-medium text-slate-700">
                 Complemento
               </span>
@@ -576,25 +517,24 @@ export default function GestoresPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
               />
             </label>
+            <label className="block">
+              <span className="mb-1 block text-lg font-medium text-slate-700">
+                Bairro
+              </span>
+              <input
+                name="bairro"
+                value={form.bairro}
+                autoComplete="off"
+                onChange={(event) =>
+                  setForm((atual) => ({ ...atual, bairro: event.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              />
+            </label>
           </div>
 
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Bairro
-            </span>
-            <input
-              name="bairro"
-              value={form.bairro}
-              autoComplete="off"
-              onChange={(event) =>
-                setForm((atual) => ({ ...atual, bairro: event.target.value }))
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-
-          <div className="grid grid-cols-3 gap-3">
-            <label className="col-span-2 block">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+            <label className="block md:col-span-2">
               <span className="mb-1 block text-lg font-medium text-slate-700">
                 Cidade
               </span>
@@ -608,7 +548,7 @@ export default function GestoresPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
               />
             </label>
-            <label className="col-span-1 block">
+            <label className="block md:col-span-1">
               <span className="mb-1 block text-lg font-medium text-slate-700">
                 UF
               </span>
@@ -621,6 +561,67 @@ export default function GestoresPage() {
                   setForm((atual) => ({
                     ...atual,
                     estado: event.target.value.toUpperCase().slice(0, 2),
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-lg font-medium text-slate-700">
+                CEP
+              </span>
+              <input
+                name="cep"
+                value={form.cep}
+                autoComplete="off"
+                inputMode="numeric"
+                placeholder="00000-000"
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    cep: maskCep(event.target.value),
+                  }))
+                }
+                onBlur={(event) => void consultarCep(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              />
+            </label>
+          </div>
+          {consultandoCep ? (
+            <p className="text-lg font-medium text-teal-700">Consultando CEP...</p>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-lg font-medium text-slate-700">
+                E-mail
+              </span>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                autoComplete="off"
+                required
+                onChange={(event) =>
+                  setForm((atual) => ({ ...atual, email: event.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-lg font-medium text-slate-700">
+                Celular
+              </span>
+              <input
+                name="celular"
+                value={form.celular}
+                autoComplete="off"
+                inputMode="numeric"
+                placeholder="(00) 00000-0000"
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    celular: maskCelular(event.target.value),
                   }))
                 }
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
