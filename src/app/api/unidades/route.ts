@@ -67,7 +67,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { numeros?: unknown };
+    const body = (await request.json()) as {
+      numeros?: unknown;
+      gestorId?: unknown;
+    };
+    delete body.gestorId;
 
     if (Array.isArray(body.numeros)) {
       return criarLote(body, session);

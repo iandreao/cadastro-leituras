@@ -20,6 +20,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      delete (body as { gestorId?: unknown }).gestorId;
+      delete (body as { role?: unknown }).role;
+    }
     const parsed = cadastroSchema.safeParse(body);
 
     if (!parsed.success) {

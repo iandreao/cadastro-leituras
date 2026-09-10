@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { listarGestores } from "@/app/admin/gestores/actions";
+import type { RoleSessao } from "@/lib/auth";
 import {
   AREA_ROLAVEL,
   CARTAO_FORMULARIO,
@@ -29,25 +31,40 @@ type Condominio = {
   email: string;
   celular: string;
   temLeitura?: boolean;
+  gestorId?: string | null;
+  gestor?: { id: string; nomeFantasia: string } | null;
 };
 
-function formularioVazio() {
+type GestorOpcao = {
+  id: string;
+  nomeFantasia: string;
+};
+
+function formularioVazio(gestorIdSessao = "") {
   return {
     cnpj: "",
     nome: "",
     endereco: "",
     email: "",
     celular: "",
+    gestorId: gestorIdSessao,
   };
 }
 
 export default function CondominioScreen({
   inicial,
+  role = "OPERADOR",
+  gestorIdSessao = "",
 }: {
   inicial: Condominio[];
+  role?: RoleSessao;
+  gestorIdSessao?: string | null;
 }) {
   const { publicar } = useCondominioSelecionado();
-  const [form, setForm] = useState(formularioVazio);
+  const podeEscolherGestor = role === "SUPER_ADMIN";
+  const gestorPadrao = gestorIdSessao ?? "";
+  const [form, setForm] = useState(() => formularioVazio(gestorPadrao));
+  const [gestores, setGestores] = useState<GestorOpcao[]>([]);
   const [lista, setLista] = useState<Condominio[]>(inicial);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
@@ -66,7 +83,7 @@ export default function CondominioScreen({
   const titulo = editandoId ? "Alterar condomínio" : "Incluir condomínio";
 
   function limparFormulario() {
-    setForm(formularioVazio());
+    setForm(formularioVazio(gestorPadrao));
     setTipoDocumento("cnpj");
     setEditandoId(null);
     setErro("");
@@ -81,6 +98,17 @@ export default function CondominioScreen({
   useEffect(() => {
     limparFormulario();
     void carregar();
+
+    if (podeEscolherGestor) {
+      void listarGestores().then((lista) => {
+        setGestores(
+          lista.map((item) => ({
+            id: item.id,
+            nomeFantasia: item.nomeFantasia,
+          })),
+        );
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -198,6 +226,7 @@ export default function CondominioScreen({
       endereco: toTitleCase(item.endereco),
       email: item.email,
       celular: maskCelular(item.celular),
+      gestorId: item.gestorId ?? gestorPadrao,
     });
     setEditandoId(item.id);
     setUltimoCnpjConsultado(tipo === "cnpj" ? onlyDigits(item.cnpj) : "");
@@ -260,10 +289,13 @@ export default function CondominioScreen({
         method: editandoId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          tipoDocumento,
+          cnpj: form.cnpj,
           nome: toTitleCase(form.nome),
           endereco: toTitleCase(form.endereco),
+          email: form.email,
+          celular: form.celular,
+          tipoDocumento,
+          ...(podeEscolherGestor ? { gestorId: form.gestorId } : {}),
         }),
       });
       const data = (await response.json()) as { error?: string };
@@ -337,6 +369,33 @@ export default function CondominioScreen({
               })}
             </div>
           </fieldset>
+
+          {podeEscolherGestor ? (
+            <label className="block">
+              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                Gestor / Cliente
+              </span>
+              <select
+                required={!editandoId}
+                disabled={Boolean(editandoId)}
+                value={form.gestorId}
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    gestorId: event.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                <option value="">Selecione o gestor</option>
+                {gestores.map((gestor) => (
+                  <option key={gestor.id} value={gestor.id}>
+                    {gestor.nomeFantasia}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <div>
             <Campo

@@ -5,7 +5,12 @@ import { requireApiSession } from "@/lib/auth";
 import { garantirBlocoPadrao } from "@/lib/blocos-db";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { condominioSchema } from "@/lib/validations";
-import { ehSuperAdmin, escopoTenant, GESTOR_PADRAO_ID } from "@/lib/multi-tenant";
+import {
+  ehSuperAdmin,
+  escopoTenant,
+  omitirDadosGestor,
+  resolverGestorIdDeCadastro,
+} from "@/lib/multi-tenant";
 
 export async function GET(request: Request) {
   const { session, error } = await requireApiSession(request);
@@ -42,7 +47,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json(
     condominios.map(({ unidades, ...condominio }) => ({
-      ...condominio,
+      ...omitirDadosGestor(condominio, session),
       temLeitura: unidades.some((unidade) => unidade._count.leituras > 0),
     })),
   );
@@ -66,8 +71,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const gestorId =
-      session.gestorId?.trim() || (ehSuperAdmin(session) ? GESTOR_PADRAO_ID : "");
+    const candidatoGestor = ehSuperAdmin(session)
+      ? (body as { gestorId?: unknown }).gestorId
+      : undefined;
+    const gestorId = await resolverGestorIdDeCadastro(session, candidatoGestor);
 
     if (!gestorId) {
       return NextResponse.json(
@@ -100,7 +107,9 @@ export async function POST(request: Request) {
     await garantirBlocoPadrao(condominio.id);
 
     invalidarCacheCadastro();
-    return NextResponse.json(condominio, { status: 201 });
+    return NextResponse.json(omitirDadosGestor(condominio, session), {
+      status: 201,
+    });
   } catch {
     return NextResponse.json(
       { error: "Não foi possível incluir o condomínio." },

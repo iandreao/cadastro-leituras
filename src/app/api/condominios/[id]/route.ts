@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { onlyDigits, toTitleCase } from "@/lib/masks";
 import { condominioSchema } from "@/lib/validations";
-import { escopoTenant } from "@/lib/multi-tenant";
+import { escopoTenant, omitirDadosGestor } from "@/lib/multi-tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -61,7 +61,7 @@ export async function PUT(request: Request, context: RouteContext) {
     });
 
     invalidarCacheCadastro();
-    return NextResponse.json(condominio);
+    return NextResponse.json(omitirDadosGestor(condominio, session));
   } catch {
     return NextResponse.json(
       { error: "Não foi possível alterar o condomínio." },

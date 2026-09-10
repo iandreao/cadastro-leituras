@@ -9,6 +9,7 @@ export const cadastroSchema = z
     senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
     confirmarSenha: z.string().min(6, "Confirme a senha."),
   })
+  .strip()
   .refine((data) => data.senha === data.confirmarSenha, {
     message: "As senhas não coincidem.",
     path: ["confirmarSenha"],
@@ -48,6 +49,7 @@ export const condominioSchema = z
         "Informe um celular válido.",
       ),
   })
+  .strip()
   .superRefine((data, ctx) => {
     const digits = onlyDigits(data.cnpj);
     const tipo =
@@ -101,21 +103,23 @@ export const condominioSchema = z
     });
   });
 
-export const unidadeSchema = z.object({
-  numero: z.string().trim().min(1, "Informe o número da unidade."),
-  nomeMorador: z.string().trim().default(""),
-  celular: z
-    .string()
-    .default("")
-    .refine(
-      (value) => value === "" || onlyDigits(value).length >= 10,
-      "Informe um celular válido.",
-    ),
-  tipoUnidadeId: z.string().min(1, "Selecione o tipo de unidade."),
-  tipoConsumo: z.enum(TIPOS_CONSUMO),
-  blocoId: z.string().min(1, "Selecione o bloco/torre."),
-  condominioId: z.string().min(1, "Selecione o condomínio."),
-});
+export const unidadeSchema = z
+  .object({
+    numero: z.string().trim().min(1, "Informe o número da unidade."),
+    nomeMorador: z.string().trim().default(""),
+    celular: z
+      .string()
+      .default("")
+      .refine(
+        (value) => value === "" || onlyDigits(value).length >= 10,
+        "Informe um celular válido.",
+      ),
+    tipoUnidadeId: z.string().min(1, "Selecione o tipo de unidade."),
+    tipoConsumo: z.enum(TIPOS_CONSUMO),
+    blocoId: z.string().min(1, "Selecione o bloco/torre."),
+    condominioId: z.string().min(1, "Selecione o condomínio."),
+  })
+  .strip();
 
 export const unidadeLoteSchema = z.object({
   condominioId: z.string().min(1, "Selecione o condomínio."),

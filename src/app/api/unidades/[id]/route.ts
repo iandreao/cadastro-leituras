@@ -30,6 +30,9 @@ export async function PUT(request: Request, context: RouteContext) {
 
   try {
     const body = await request.json();
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      delete (body as { gestorId?: unknown }).gestorId;
+    }
     const parsed = unidadeSchema.safeParse(body);
 
     if (!parsed.success) {

@@ -213,6 +213,43 @@ export async function completarSessaoTenant(session: SessionUser): Promise<Sessi
   }
 }
 
+export function omitirDadosGestor<T extends { gestorId?: unknown; gestor?: unknown }>(
+  registro: T,
+  session: Pick<SessionUser, "role"> | null | undefined,
+) {
+  if (ehSuperAdmin(session)) {
+    return registro;
+  }
+
+  const { gestorId: _gestorId, gestor: _gestor, ...resto } = registro;
+  return resto;
+}
+
+export async function resolverGestorIdDeCadastro(
+  session: SessionUser,
+  candidatoDoCliente?: unknown,
+) {
+  if (!ehSuperAdmin(session)) {
+    return session.gestorId?.trim() || null;
+  }
+
+  const candidato =
+    typeof candidatoDoCliente === "string" ? candidatoDoCliente.trim() : "";
+
+  if (candidato) {
+    const gestor = await getPrisma().gestor.findFirst({
+      where: { id: candidato, ativo: true },
+      select: { id: true },
+    });
+
+    if (gestor) {
+      return gestor.id;
+    }
+  }
+
+  return session.gestorId?.trim() || GESTOR_PADRAO_ID;
+}
+
 export async function buscarCondominioDoTenant(
   session: SessionUser,
   condominioId: string | null | undefined,

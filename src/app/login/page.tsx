@@ -36,7 +36,12 @@ export default function LoginPage() {
       const payload =
         modo === "login"
           ? { email: form.email, senha: form.senha }
-          : form;
+          : {
+              nome: form.nome,
+              email: form.email,
+              senha: form.senha,
+              confirmarSenha: form.confirmarSenha,
+            };
 
       const response = await fetch(url, {
         method: "POST",
