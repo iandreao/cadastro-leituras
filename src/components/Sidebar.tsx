@@ -20,6 +20,11 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
     roles: ["SUPER_ADMIN", "GESTOR_ADMIN"],
   },
   {
+    href: "/admin/movimentos",
+    label: "Fechamento de Mês",
+    roles: ["SUPER_ADMIN", "GESTOR_ADMIN"],
+  },
+  {
     href: "/admin/gestores",
     label: "Gestores / Clientes",
     roles: ["SUPER_ADMIN"],

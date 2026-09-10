@@ -16,15 +16,16 @@ enum Role {
 }
 
 model Gestor {
-  id           String       @id @default(uuid())
+  id           String            @id @default(uuid())
   nomeFantasia String
   razaoSocial  String?
-  cnpj         String?      @unique
-  ativo        Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  cnpj         String?           @unique
+  ativo        Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   usuarios     Usuario[]
   condominios  Condominio[]
+  movimentos   MovimentoMensal[]
 }
 
 model Usuario {
@@ -184,6 +185,8 @@ model MovimentoMensal {
   id           String     @id @default(cuid())
   condominioId String
   condominio   Condominio @relation(fields: [condominioId], references: [id], onDelete: Restrict)
+  gestorId     String
+  gestor       Gestor     @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   mes          Int
   ano          Int
   fechado      Boolean    @default(false)
@@ -191,7 +194,9 @@ model MovimentoMensal {
   updatedAt    DateTime   @updatedAt
 
   @@unique([condominioId, mes, ano])
+  @@unique([mes, ano, gestorId])
   @@index([condominioId])
+  @@index([gestorId])
 }
 
 model FaturaUnidade {

@@ -98,6 +98,7 @@ export async function POST(request: Request) {
     }
 
     const periodoFechado = await respostaSePeriodoUnidadeFechado(
+      session,
       parsed.data.unidadeId,
       parsed.data.mes,
       parsed.data.ano,
@@ -174,6 +175,7 @@ async function salvarLote(body: unknown, session: SessionUser) {
   }
 
   const periodoFechado = await respostaSeMovimentoFechado(
+    session,
     condominioId,
     mes,
     ano,

@@ -102,6 +102,45 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
      ON DELETE RESTRICT ON UPDATE CASCADE`,
   );
 
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "MovimentoMensal" ADD COLUMN IF NOT EXISTS "gestorId" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `UPDATE "MovimentoMensal" AS m
+     SET "gestorId" = c."gestorId"
+     FROM "Condominio" AS c
+     WHERE c."id" = m."condominioId"
+       AND (m."gestorId" IS NULL OR m."gestorId" = '')`,
+  );
+  await executarSePossivel(
+    db,
+    `UPDATE "MovimentoMensal"
+     SET "gestorId" = '${GESTOR_PADRAO_ID}'
+     WHERE "gestorId" IS NULL OR "gestorId" = ''`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "MovimentoMensal" ALTER COLUMN "gestorId" SET NOT NULL`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE INDEX IF NOT EXISTS "MovimentoMensal_gestorId_idx" ON "MovimentoMensal"("gestorId")`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "MovimentoMensal"
+     ADD CONSTRAINT "MovimentoMensal_gestorId_fkey"
+     FOREIGN KEY ("gestorId") REFERENCES "Gestor"("id")
+     ON DELETE RESTRICT ON UPDATE CASCADE`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "MovimentoMensal_mes_ano_gestorId_key"
+     ON "MovimentoMensal"("mes", "ano", "gestorId")`,
+  );
+
   if (db === getPrisma()) {
     schemaPronto = true;
   }

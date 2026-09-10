@@ -592,7 +592,7 @@ export async function processarApuracao(
 
   if (
     opcoes?.recusarSeFechado &&
-    (await movimentoEstaFechado(condominioId, mes, ano))
+    (await movimentoEstaFechado(condominioId, mes, ano, opcoes?.session))
   ) {
     return {
       error:
@@ -919,7 +919,7 @@ export async function carregarApuracaoPeriodo(
     };
   }
 
-  const fechado = await movimentoEstaFechado(condominioId, mes, ano);
+  const fechado = await movimentoEstaFechado(condominioId, mes, ano, session);
 
   if (fechado) {
     const faturas = montarFaturasSalvasDoPacote(pacote, mes, ano);

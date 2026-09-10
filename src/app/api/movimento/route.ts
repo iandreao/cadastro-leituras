@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const fechados = await listarPeriodosFechados(condominioId);
+    const fechados = await listarPeriodosFechados(condominioId, session);
     const mes = searchParams.get("mes");
     const ano = searchParams.get("ano");
 
@@ -93,6 +93,7 @@ export async function GET(request: Request) {
               parsed.data.condominioId,
               parsed.data.mes,
               parsed.data.ano,
+              session,
             )) ||
             fechados.some(
               (item: PeriodoFechado) =>

@@ -57,6 +57,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const bloqueado = await respostaSeMovimentoFechado(
+    session,
     despesa.condominioId,
     despesa.mes,
     despesa.ano,

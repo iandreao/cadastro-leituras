@@ -75,6 +75,7 @@ export async function persistirDespesaMensal(
     }
 
     const bloqueadoAtual = await falhaSeMovimentoFechado(
+      session,
       existente.condominioId,
       existente.mes,
       existente.ano,
@@ -88,7 +89,12 @@ export async function persistirDespesaMensal(
   const { condominioId, tipoDespesaId, blocoId, mes, ano, formaCobranca } =
     parsed.data;
 
-  const bloqueadoNovo = await falhaSeMovimentoFechado(condominioId, mes, ano);
+  const bloqueadoNovo = await falhaSeMovimentoFechado(
+    session,
+    condominioId,
+    mes,
+    ano,
+  );
 
   if (bloqueadoNovo) {
     return bloqueadoNovo;

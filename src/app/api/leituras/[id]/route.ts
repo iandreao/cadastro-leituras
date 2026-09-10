@@ -62,6 +62,7 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const bloqueadoAtual = await respostaSePeriodoUnidadeFechado(
+      session,
       atual.unidadeId,
       atual.mes,
       atual.ano,
@@ -72,6 +73,7 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const bloqueadoNovo = await respostaSePeriodoUnidadeFechado(
+      session,
       parsed.data.unidadeId,
       parsed.data.mes,
       parsed.data.ano,
@@ -149,6 +151,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const bloqueado = await respostaSePeriodoUnidadeFechado(
+    session,
     leitura.unidadeId,
     leitura.mes,
     leitura.ano,
