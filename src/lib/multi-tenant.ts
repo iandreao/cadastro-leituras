@@ -53,18 +53,24 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
     db,
     `CREATE TABLE IF NOT EXISTS "Gestor" (
        "id" TEXT NOT NULL,
-       "nomeFantasia" TEXT NOT NULL,
+       "nome" TEXT NOT NULL,
        "razaoSocial" TEXT,
-       "cnpj" TEXT,
+       "email" TEXT,
+       "celular" TEXT,
+       "tipoPessoa" TEXT NOT NULL DEFAULT 'JURIDICA',
+       "documento" TEXT,
+       "cep" TEXT,
+       "logradouro" TEXT,
+       "numero" TEXT,
+       "complemento" TEXT,
+       "bairro" TEXT,
+       "cidade" TEXT,
+       "estado" TEXT,
        "ativo" BOOLEAN NOT NULL DEFAULT true,
        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
        CONSTRAINT "Gestor_pkey" PRIMARY KEY ("id")
      )`,
-  );
-  await executarSePossivel(
-    db,
-    `CREATE UNIQUE INDEX IF NOT EXISTS "Gestor_cnpj_key" ON "Gestor"("cnpj")`,
   );
 
   await executarSePossivel(
@@ -141,6 +147,63 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
      ON "MovimentoMensal"("mes", "ano", "gestorId")`,
   );
 
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "nome" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "email" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "celular" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "tipoPessoa" TEXT DEFAULT 'JURIDICA'`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "documento" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "cep" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "logradouro" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "numero" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "complemento" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "bairro" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "cidade" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `ALTER TABLE "Gestor" ADD COLUMN IF NOT EXISTS "estado" TEXT`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "Gestor_email_key" ON "Gestor"("email")`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "Gestor_documento_key" ON "Gestor"("documento")`,
+  );
+
   if (db === getPrisma()) {
     schemaPronto = true;
   }
@@ -154,12 +217,18 @@ export async function garantirTenantPadrao(
   await db.gestor.upsert({
     where: { id: GESTOR_PADRAO_ID },
     update: {
-      nomeFantasia: GESTOR_PADRAO_NOME,
+      nome: GESTOR_PADRAO_NOME,
+      razaoSocial: GESTOR_PADRAO_NOME,
+      tipoPessoa: "JURIDICA",
+      email: SUPER_ADMIN_EMAIL,
       ativo: true,
     },
     create: {
       id: GESTOR_PADRAO_ID,
-      nomeFantasia: GESTOR_PADRAO_NOME,
+      nome: GESTOR_PADRAO_NOME,
+      razaoSocial: GESTOR_PADRAO_NOME,
+      tipoPessoa: "JURIDICA",
+      email: SUPER_ADMIN_EMAIL,
     },
   });
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireApiSession } from "@/lib/auth";
-import { formatEnderecoReceita, isValidCnpj, toTitleCase } from "@/lib/masks";
+import {
+  formatEnderecoReceita,
+  isValidCnpj,
+  onlyDigits,
+  toTitleCase,
+} from "@/lib/masks";
 
 type EmpresaCnpj = {
   razao_social?: string;
@@ -14,6 +19,9 @@ type EmpresaCnpj = {
   municipio?: string;
   uf?: string;
   cep?: string;
+  email?: string;
+  telefone?: string;
+  ddd_telefone_1?: string;
   status?: string;
   message?: string;
 };
@@ -32,8 +40,21 @@ function empresaFromJson(data: EmpresaCnpj) {
     data.fantasia?.trim() ||
     "";
   const endereco = formatEnderecoReceita(data);
+  const telefone = data.telefone?.trim() || data.ddd_telefone_1?.trim() || "";
 
-  return { nome: toTitleCase(nome), endereco: toTitleCase(endereco) };
+  return {
+    nome: toTitleCase(nome),
+    endereco: toTitleCase(endereco),
+    email: data.email?.trim().toLowerCase() ?? "",
+    celular: onlyDigits(telefone).slice(0, 11),
+    cep: onlyDigits(data.cep ?? "").slice(0, 8),
+    logradouro: toTitleCase(data.logradouro ?? ""),
+    numero: data.numero?.trim() ?? "",
+    complemento: toTitleCase(data.complemento ?? ""),
+    bairro: toTitleCase(data.bairro ?? ""),
+    cidade: toTitleCase(data.municipio ?? ""),
+    estado: (data.uf ?? "").trim().toUpperCase().slice(0, 2),
+  };
 }
 
 async function consultarUrl(url: string) {

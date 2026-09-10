@@ -739,32 +739,40 @@ async function garantirCenariosIsolamento() {
   const alfa = await prisma.gestor.upsert({
     where: { id: GESTOR_ALFA_ID },
     update: {
-      nomeFantasia: "Administradora Alfa",
+      nome: "Administradora Alfa",
       razaoSocial: "Administradora Alfa Ltda",
-      cnpj: CNPJ_GESTOR_ALFA,
+      tipoPessoa: "JURIDICA",
+      documento: CNPJ_GESTOR_ALFA,
+      email: "alfa@condosys.com",
       ativo: true,
     },
     create: {
       id: GESTOR_ALFA_ID,
-      nomeFantasia: "Administradora Alfa",
+      nome: "Administradora Alfa",
       razaoSocial: "Administradora Alfa Ltda",
-      cnpj: CNPJ_GESTOR_ALFA,
+      tipoPessoa: "JURIDICA",
+      documento: CNPJ_GESTOR_ALFA,
+      email: "alfa@condosys.com",
     },
   });
 
   const beta = await prisma.gestor.upsert({
     where: { id: GESTOR_BETA_ID },
     update: {
-      nomeFantasia: "Administradora Beta",
+      nome: "Administradora Beta",
       razaoSocial: "Administradora Beta Ltda",
-      cnpj: CNPJ_GESTOR_BETA,
+      tipoPessoa: "JURIDICA",
+      documento: CNPJ_GESTOR_BETA,
+      email: "beta@condosys.com",
       ativo: true,
     },
     create: {
       id: GESTOR_BETA_ID,
-      nomeFantasia: "Administradora Beta",
+      nome: "Administradora Beta",
       razaoSocial: "Administradora Beta Ltda",
-      cnpj: CNPJ_GESTOR_BETA,
+      tipoPessoa: "JURIDICA",
+      documento: CNPJ_GESTOR_BETA,
+      email: "beta@condosys.com",
     },
   });
 
@@ -842,12 +850,12 @@ async function garantirCenariosIsolamento() {
 
   console.log("Cenários de isolamento gravados", {
     alfa: {
-      gestor: alfa.nomeFantasia,
+      gestor: alfa.nome,
       usuario: "alfa@condosys.com",
       condominio: sol.nome,
     },
     beta: {
-      gestor: beta.nomeFantasia,
+      gestor: beta.nome,
       usuario: "beta@condosys.com",
       condominio: lua.nome,
     },

@@ -17,9 +17,19 @@ enum Role {
 
 model Gestor {
   id           String            @id @default(uuid())
-  nomeFantasia String
+  nome         String
   razaoSocial  String?
-  cnpj         String?           @unique
+  email        String?           @unique
+  celular      String?
+  tipoPessoa   String            @default("JURIDICA")
+  documento    String?           @unique
+  cep          String?
+  logradouro   String?
+  numero       String?
+  complemento  String?
+  bairro       String?
+  cidade       String?
+  estado       String?
   ativo        Boolean           @default(true)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt

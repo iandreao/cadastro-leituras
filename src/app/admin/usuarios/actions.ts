@@ -24,7 +24,7 @@ export type UsuarioLista = {
 
 export type GestorOpcao = {
   id: string;
-  nomeFantasia: string;
+  nome: string;
 };
 
 export type ResultadoUsuario = { ok: true } | { error: string };
@@ -86,8 +86,8 @@ export async function listarGestoresOpcoes(): Promise<GestorOpcao[]> {
 
   return getPrisma().gestor.findMany({
     where: { ativo: true },
-    orderBy: { nomeFantasia: "asc" },
-    select: { id: true, nomeFantasia: true },
+    orderBy: { nome: "asc" },
+    select: { id: true, nome: true },
   });
 }
 
@@ -112,7 +112,7 @@ export async function listarUsuarios(): Promise<UsuarioLista[]> {
       gestorId: true,
       createdAt: true,
       gestor: {
-        select: { nomeFantasia: true },
+        select: { nome: true },
       },
     },
   });
@@ -123,7 +123,7 @@ export async function listarUsuarios(): Promise<UsuarioLista[]> {
     email: usuario.email,
     role: usuario.role === Role.GESTOR_ADMIN ? "GESTOR_ADMIN" : "OPERADOR",
     gestorId: usuario.gestorId,
-    gestorNome: usuario.gestor?.nomeFantasia ?? null,
+    gestorNome: usuario.gestor?.nome ?? null,
     createdAt: usuario.createdAt,
   }));
 }

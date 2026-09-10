@@ -32,12 +32,12 @@ type Condominio = {
   celular: string;
   temLeitura?: boolean;
   gestorId?: string | null;
-  gestor?: { id: string; nomeFantasia: string } | null;
+  gestor?: { id: string; nome: string } | null;
 };
 
 type GestorOpcao = {
   id: string;
-  nomeFantasia: string;
+  nome: string;
 };
 
 function formularioVazio(gestorIdSessao = "") {
@@ -104,7 +104,7 @@ export default function CondominioScreen({
         setGestores(
           lista.map((item) => ({
             id: item.id,
-            nomeFantasia: item.nomeFantasia,
+            nome: item.nome,
           })),
         );
       });
@@ -390,7 +390,7 @@ export default function CondominioScreen({
                 <option value="">Selecione o gestor</option>
                 {gestores.map((gestor) => (
                   <option key={gestor.id} value={gestor.id}>
-                    {gestor.nomeFantasia}
+                    {gestor.nome}
                   </option>
                 ))}
               </select>

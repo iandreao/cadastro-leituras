@@ -42,6 +42,16 @@ export function tipoDocumentoDe(value: string): "cpf" | "cnpj" {
   return onlyDigits(value).length <= 11 ? "cpf" : "cnpj";
 }
 
+export function maskCep(value: string) {
+  const digits = onlyDigits(value).slice(0, 8);
+
+  if (digits.length <= 5) {
+    return digits;
+  }
+
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
 export function maskCelular(value: string) {
   const digits = onlyDigits(value).slice(0, 11);
 

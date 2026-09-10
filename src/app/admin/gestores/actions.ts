@@ -3,26 +3,43 @@
 import { Prisma, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
-import { onlyDigits, toTitleCase } from "@/lib/masks";
+import {
+  isValidCnpj,
+  isValidCpf,
+  onlyDigits,
+  toTitleCase,
+} from "@/lib/masks";
 import { getPrisma } from "@/lib/prisma";
-import { garantirTenantPadrao } from "@/lib/multi-tenant";
+import { GESTOR_PADRAO_ID, garantirTenantPadrao } from "@/lib/multi-tenant";
 
 export type GestorLista = {
   id: string;
-  nomeFantasia: string;
+  nome: string;
   razaoSocial: string | null;
-  cnpj: string | null;
+  email: string | null;
+  celular: string | null;
+  tipoPessoa: string;
+  documento: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
   ativo: boolean;
   createdAt: Date;
 };
 
-export type ResultadoGestor =
-  | { ok: true }
-  | { error: string };
+export type ResultadoGestor = { ok: true } | { error: string };
 
 function textoCampo(formData: FormData, nome: string) {
   const valor = formData.get(nome);
   return typeof valor === "string" ? valor.trim() : "";
+}
+
+function textoOpcional(valor: string) {
+  return valor ? valor : null;
 }
 
 async function exigirSuperAdmin() {
@@ -47,6 +64,80 @@ async function exigirSuperAdmin() {
   }
 
   return { error: null, session, usuario };
+}
+
+function dadosDoFormulario(formData: FormData) {
+  const tipoPessoaBruto = textoCampo(formData, "tipoPessoa").toUpperCase();
+  const tipoPessoa =
+    tipoPessoaBruto === "FISICA" ? "FISICA" : "JURIDICA";
+  const nome = toTitleCase(textoCampo(formData, "nome"));
+  const emailBruto = textoCampo(formData, "email").toLowerCase();
+  const celular = onlyDigits(textoCampo(formData, "celular"));
+  const documento = onlyDigits(textoCampo(formData, "documento"));
+  const cep = onlyDigits(textoCampo(formData, "cep"));
+  const estado = textoCampo(formData, "estado").toUpperCase();
+
+  return {
+    nome,
+    razaoSocial: tipoPessoa === "JURIDICA" ? nome : textoOpcional(nome),
+    email: textoOpcional(emailBruto),
+    celular: textoOpcional(celular),
+    tipoPessoa,
+    documento: textoOpcional(documento),
+    cep: textoOpcional(cep),
+    logradouro: textoOpcional(toTitleCase(textoCampo(formData, "logradouro"))),
+    numero: textoOpcional(textoCampo(formData, "numero")),
+    complemento: textoOpcional(toTitleCase(textoCampo(formData, "complemento"))),
+    bairro: textoOpcional(toTitleCase(textoCampo(formData, "bairro"))),
+    cidade: textoOpcional(toTitleCase(textoCampo(formData, "cidade"))),
+    estado: textoOpcional(estado),
+  };
+}
+
+function validarGestor(dados: ReturnType<typeof dadosDoFormulario>) {
+  if (!dados.nome) {
+    return "Informe o nome ou razão social do gestor.";
+  }
+
+  if (!dados.email || !dados.email.includes("@")) {
+    return "Informe um e-mail válido.";
+  }
+
+  if (dados.celular && dados.celular.length < 10) {
+    return "Informe um celular com DDD.";
+  }
+
+  if (dados.tipoPessoa === "FISICA") {
+    if (!dados.documento || !isValidCpf(dados.documento)) {
+      return "Informe um CPF válido.";
+    }
+  } else if (!dados.documento || !isValidCnpj(dados.documento)) {
+    return "Informe um CNPJ válido.";
+  }
+
+  if (dados.cep && dados.cep.length !== 8) {
+    return "Informe um CEP com 8 dígitos.";
+  }
+
+  if (dados.estado && dados.estado.length !== 2) {
+    return "Informe a UF com 2 letras.";
+  }
+
+  return null;
+}
+
+function mensagemUnica(error: Prisma.PrismaClientKnownRequestError) {
+  const alvo = JSON.stringify(error.meta ?? {}).toLowerCase();
+
+  if (alvo.includes("email")) {
+    return "Já existe um gestor cadastrado com este e-mail.";
+  }
+
+  if (alvo.includes("documento")) {
+    return "Já existe um gestor cadastrado com este CPF/CNPJ.";
+  }
+
+  return "Já existe um gestor com estes dados.";
 }
 
 export async function obterPerfilAdmin() {
@@ -75,56 +166,178 @@ export async function listarGestores(): Promise<GestorLista[]> {
   }
 
   return getPrisma().gestor.findMany({
-    orderBy: { nomeFantasia: "asc" },
+    orderBy: { nome: "asc" },
     select: {
       id: true,
-      nomeFantasia: true,
+      nome: true,
       razaoSocial: true,
-      cnpj: true,
+      email: true,
+      celular: true,
+      tipoPessoa: true,
+      documento: true,
+      cep: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      bairro: true,
+      cidade: true,
+      estado: true,
       ativo: true,
       createdAt: true,
     },
   });
 }
 
-export async function criarGestor(formData: FormData): Promise<ResultadoGestor> {
+export async function salvarGestor(formData: FormData): Promise<ResultadoGestor> {
   const acesso = await exigirSuperAdmin();
 
   if (acesso.error) {
     return { error: acesso.error };
   }
 
-  const nomeFantasia = toTitleCase(textoCampo(formData, "nomeFantasia"));
-  const razaoSocialBruto = textoCampo(formData, "razaoSocial");
-  const razaoSocial = razaoSocialBruto ? toTitleCase(razaoSocialBruto) : null;
-  const cnpjDigitos = onlyDigits(textoCampo(formData, "cnpj"));
-  const cnpj = cnpjDigitos.length > 0 ? cnpjDigitos : null;
+  const id = textoCampo(formData, "id");
+  const dados = dadosDoFormulario(formData);
+  const invalido = validarGestor(dados);
 
-  if (!nomeFantasia) {
-    return { error: "Informe o nome fantasia do gestor." };
-  }
-
-  if (cnpj && cnpj.length !== 14) {
-    return { error: "Informe um CNPJ com 14 dígitos." };
+  if (invalido) {
+    return { error: invalido };
   }
 
   try {
-    await getPrisma().gestor.create({
-      data: {
-        nomeFantasia,
-        razaoSocial,
-        cnpj,
-      },
-    });
+    if (id) {
+      const existente = await getPrisma().gestor.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!existente) {
+        return { error: "Gestor não encontrado." };
+      }
+
+      await getPrisma().gestor.update({
+        where: { id },
+        data: dados,
+      });
+    } else {
+      await getPrisma().gestor.create({
+        data: dados,
+      });
+    }
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      return { error: "Já existe um gestor cadastrado com este CNPJ." };
+      return { error: mensagemUnica(error) };
     }
 
     return { error: "Não foi possível salvar o gestor. Tente novamente." };
+  }
+
+  revalidatePath("/admin/gestores");
+  return { ok: true };
+}
+
+export async function alternarAtivoGestor(id: string): Promise<ResultadoGestor> {
+  const acesso = await exigirSuperAdmin();
+
+  if (acesso.error) {
+    return { error: acesso.error };
+  }
+
+  const gestorId = id.trim();
+
+  if (!gestorId) {
+    return { error: "Gestor não encontrado." };
+  }
+
+  const gestor = await getPrisma().gestor.findUnique({
+    where: { id: gestorId },
+    select: { id: true, ativo: true },
+  });
+
+  if (!gestor) {
+    return { error: "Gestor não encontrado." };
+  }
+
+  await getPrisma().gestor.update({
+    where: { id: gestorId },
+    data: { ativo: !gestor.ativo },
+  });
+
+  revalidatePath("/admin/gestores");
+  return { ok: true };
+}
+
+export async function excluirGestor(id: string): Promise<ResultadoGestor> {
+  const acesso = await exigirSuperAdmin();
+
+  if (acesso.error) {
+    return { error: acesso.error };
+  }
+
+  const gestorId = id.trim();
+
+  if (!gestorId) {
+    return { error: "Gestor não encontrado." };
+  }
+
+  if (gestorId === GESTOR_PADRAO_ID) {
+    return { error: "A Administradora Master não pode ser excluída." };
+  }
+
+  const [condominios, movimentosFechados, movimentos, usuarios] =
+    await Promise.all([
+      getPrisma().condominio.count({ where: { gestorId } }),
+      getPrisma().movimentoMensal.count({
+        where: { gestorId, fechado: true },
+      }),
+      getPrisma().movimentoMensal.count({ where: { gestorId } }),
+      getPrisma().usuario.count({ where: { gestorId } }),
+    ]);
+
+  if (condominios > 0) {
+    return {
+      error:
+        "Não é possível excluir este gestor: existem condomínios vinculados a ele.",
+    };
+  }
+
+  if (movimentosFechados > 0) {
+    return {
+      error:
+        "Não é possível excluir este gestor: existem competências fechadas vinculadas a este tenant.",
+    };
+  }
+
+  if (movimentos > 0) {
+    return {
+      error:
+        "Não é possível excluir este gestor: existem movimentos mensais vinculados a este tenant.",
+    };
+  }
+
+  if (usuarios > 0) {
+    return {
+      error:
+        "Não é possível excluir este gestor: existem usuários vinculados a ele.",
+    };
+  }
+
+  try {
+    await getPrisma().gestor.delete({ where: { id: gestorId } });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return {
+        error:
+          "Não é possível excluir este gestor: há registros vinculados a ele.",
+      };
+    }
+
+    return { error: "Não foi possível excluir o gestor. Tente novamente." };
   }
 
   revalidatePath("/admin/gestores");

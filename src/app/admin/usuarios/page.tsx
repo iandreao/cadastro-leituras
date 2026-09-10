@@ -202,7 +202,7 @@ export default function UsuariosPage() {
                 <option value="">Selecione o gestor</option>
                 {gestores.map((gestor) => (
                   <option key={gestor.id} value={gestor.id}>
-                    {gestor.nomeFantasia}
+                    {gestor.nome}
                   </option>
                 ))}
               </select>
