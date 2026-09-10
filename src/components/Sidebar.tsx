@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
+import { classeTagRole, rotuloRole } from "@/lib/roles-ui";
 
 const itens: { href: string; label: string; roles?: string[] }[] = [
   { href: "/condominios", label: "Incluir Condomínio" },
@@ -33,8 +34,10 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
 
 export default function Sidebar({
   role = "OPERADOR",
+  nome = "",
 }: {
   role?: string;
+  nome?: string;
 }) {
   const pathname = usePathname();
   const { selecionado } = useCondominioSelecionado();
@@ -64,6 +67,18 @@ export default function Sidebar({
           <p className="mt-1.5 truncate text-sm text-teal-100/80">
             {nomeCondominio}
           </p>
+          {nome ? (
+            <div className="mt-3 rounded-lg bg-white/10 px-3 py-2">
+              <p className="truncate text-sm font-medium text-white" title={nome}>
+                {nome}
+              </p>
+              <span
+                className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${classeTagRole(role)}`}
+              >
+                {rotuloRole(role)}
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col space-y-1 overflow-y-auto px-3 py-2">

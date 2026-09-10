@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
+import AcessoRestrito from "@/components/AcessoRestrito";
 import {
   listarGestoresOpcoes,
   type GestorOpcao,
@@ -96,11 +97,7 @@ export default function MovimentosPage() {
   }
 
   if (autorizado === false) {
-    return (
-      <p className="text-lg text-slate-600">
-        Acesso restrito ao gestor da administradora.
-      </p>
-    );
+    return <AcessoRestrito />;
   }
 
   return (

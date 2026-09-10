@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import AcessoRestrito from "@/components/AcessoRestrito";
 import Sidebar from "@/components/Sidebar";
 import { CondominioSelecionadoProvider } from "@/lib/condominio-selecionado";
 import { getSession } from "@/lib/session";
@@ -16,16 +17,15 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  if (session.role !== "SUPER_ADMIN" && session.role !== "GESTOR_ADMIN") {
-    redirect("/condominios");
-  }
+  const conteudo =
+    session.role === "OPERADOR" ? <AcessoRestrito /> : children;
 
   return (
     <CondominioSelecionadoProvider>
       <div className="min-h-screen lg:flex lg:h-screen">
-        <Sidebar role={session.role} />
+        <Sidebar nome={session.nome} role={session.role} />
         <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 lg:p-4">
-          {children}
+          {conteudo}
         </main>
       </div>
     </CondominioSelecionadoProvider>

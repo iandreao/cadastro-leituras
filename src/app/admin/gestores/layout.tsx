@@ -8,6 +8,10 @@ export default async function GestoresAdminLayout({
 }) {
   const session = await getSession();
 
+  if (session?.role === "OPERADOR") {
+    return children;
+  }
+
   if (session?.role !== "SUPER_ADMIN") {
     redirect("/admin/usuarios");
   }

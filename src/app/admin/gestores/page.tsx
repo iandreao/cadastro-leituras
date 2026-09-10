@@ -8,6 +8,7 @@ import {
   GRADE_CADASTRO,
 } from "@/lib/layout-cadastro";
 import { maskCnpj, toTitleCase } from "@/lib/masks";
+import AcessoRestrito from "@/components/AcessoRestrito";
 import {
   criarGestor,
   listarGestores,
@@ -77,21 +78,7 @@ export default function GestoresPage() {
   }
 
   if (!autorizado) {
-    return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-red-200 bg-red-50 p-8 shadow-sm">
-        <p className="text-sm font-medium tracking-[0.2em] text-red-700 uppercase">
-          Acesso restrito
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold text-red-950">
-          Área exclusiva do Super Admin
-        </h1>
-        <p className="mt-3 text-base leading-6 text-red-800">
-          O cadastro de gestores e clientes SaaS está disponível somente para a
-          role SUPER_ADMIN. Entre com uma conta autorizada ou solicite acesso ao
-          administrador da plataforma.
-        </p>
-      </div>
-    );
+    return <AcessoRestrito />;
   }
 
   return (
