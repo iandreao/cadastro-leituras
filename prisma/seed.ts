@@ -5,6 +5,11 @@ import {
   NOME_BLOCO_PADRAO,
   persistirBloco,
 } from "../src/lib/blocos";
+import {
+  GESTOR_PADRAO_ID,
+  SUPER_ADMIN_EMAIL,
+  garantirTenantPadrao,
+} from "../src/lib/multi-tenant";
 
 const prisma = new PrismaClient();
 
@@ -658,17 +663,53 @@ async function migrarModeloBlocoRelacional() {
 }
 
 async function garantirUsuarioAdmin() {
+  await garantirTenantPadrao(prisma);
+
   const email = ADMIN_EMAIL.toLowerCase();
   const senha = await bcrypt.hash(ADMIN_SENHA, 10);
 
   await prisma.usuario.upsert({
     where: { email },
-    update: { nome: ADMIN_NOME, senha },
+    update: {
+      nome: ADMIN_NOME,
+      senha,
+      role: "SUPER_ADMIN",
+      gestorId: GESTOR_PADRAO_ID,
+    },
     create: {
       nome: ADMIN_NOME,
       email,
       senha,
+      role: "SUPER_ADMIN",
+      gestorId: GESTOR_PADRAO_ID,
     },
+  });
+
+  const senhaMaster = await bcrypt.hash(ADMIN_SENHA, 10);
+
+  await prisma.usuario.upsert({
+    where: { email: SUPER_ADMIN_EMAIL },
+    update: {
+      nome: "Super Admin",
+      role: "SUPER_ADMIN",
+      gestorId: GESTOR_PADRAO_ID,
+    },
+    create: {
+      nome: "Super Admin",
+      email: SUPER_ADMIN_EMAIL,
+      senha: senhaMaster,
+      role: "SUPER_ADMIN",
+      gestorId: GESTOR_PADRAO_ID,
+    },
+  });
+
+  await prisma.usuario.updateMany({
+    where: { gestorId: null },
+    data: { gestorId: GESTOR_PADRAO_ID },
+  });
+  await prisma.condominio.updateMany({
+    where: { gestorId: null },
+    data: { gestorId: GESTOR_PADRAO_ID },
   });
 }
 

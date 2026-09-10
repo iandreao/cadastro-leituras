@@ -47,7 +47,8 @@ export async function POST(request: Request) {
     }
 
     const email = registro.email.toLowerCase();
-    const usuario = await repositorioUsuario().findUnique({
+    const usuarios = await repositorioUsuario();
+    const usuario = await usuarios.findUnique({
       where: { email },
       select: { id: true },
     });
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
 
     const hash = await bcrypt.hash(senha, 10);
 
-    await repositorioUsuario().update({
+    await usuarios.update({
       where: { id: usuario.id },
       data: { senha: hash },
     });

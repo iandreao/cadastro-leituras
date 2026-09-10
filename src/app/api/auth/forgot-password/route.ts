@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const email = parsed.data.email.toLowerCase();
-    const usuario = await repositorioUsuario().findUnique({
+    const usuario = await (await repositorioUsuario()).findUnique({
       where: { email },
       select: { id: true, email: true },
     });

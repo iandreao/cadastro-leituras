@@ -9,14 +9,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  SUPER_ADMIN
+  GESTOR_ADMIN
+  OPERADOR
+}
+
+model Gestor {
+  id           String       @id @default(uuid())
+  nomeFantasia String
+  razaoSocial  String?
+  cnpj         String?      @unique
+  ativo        Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  usuarios     Usuario[]
+  condominios  Condominio[]
+}
+
 model Usuario {
   id        String   @id @default(cuid())
   nome      String
   email     String   @unique
   senha     String
+  role      Role     @default(OPERADOR)
+  gestorId  String?
+  gestor    Gestor?  @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([gestorId])
   @@map("users")
 }
 
@@ -27,6 +49,8 @@ model Condominio {
   endereco        String
   email           String
   celular         String
+  gestorId        String?
+  gestor          Gestor?         @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   blocos          Bloco[]
@@ -35,6 +59,8 @@ model Condominio {
   tiposUnidade    TipoUnidade[]
   tiposDespesa    TipoDespesa[]
   movimentos      MovimentoMensal[]
+
+  @@index([gestorId])
 }
 
 model Bloco {

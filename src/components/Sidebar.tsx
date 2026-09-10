@@ -14,6 +14,7 @@ const itens = [
   { href: "/leituras/agua", label: "Inserir Leitura de Água" },
   { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
   { href: "/apuracao", label: "Apurar Despesas do Mês" },
+  { href: "/admin/gestores", label: "Gestores / Clientes" },
 ];
 
 export default function Sidebar() {

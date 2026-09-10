@@ -31,7 +31,11 @@ export async function POST(request: Request) {
 
     const { nome, email, senha } = parsed.data;
     const emailNormalizado = email.toLowerCase();
-    const usuarios = repositorioUsuario();
+    const { GESTOR_PADRAO_ID, garantirTenantPadrao } = await import(
+      "@/lib/multi-tenant"
+    );
+    await garantirTenantPadrao();
+    const usuarios = await repositorioUsuario();
 
     const existente = await usuarios.findUnique({
       where: { email: emailNormalizado },
@@ -50,6 +54,7 @@ export async function POST(request: Request) {
         nome,
         email: emailNormalizado,
         senha: hash,
+        gestorId: GESTOR_PADRAO_ID,
       },
     });
 
