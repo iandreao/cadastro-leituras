@@ -7,6 +7,7 @@ import {
 } from "../src/lib/blocos";
 import {
   GESTOR_PADRAO_ID,
+  GESTOR_PADRAO_NOME,
   SUPER_ADMIN_EMAIL,
   garantirTenantPadrao,
 } from "../src/lib/multi-tenant";
@@ -72,6 +73,12 @@ async function tabelaExiste(tabela: string) {
 }
 
 async function migrarColunasAntigas() {
+  if (
+    (await colunaExiste("TipoUnidade", "condominioId")) &&
+    (await colunaExiste("TipoUnidade", "blocoId"))
+  ) {
+    return;
+  }
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "TipoUnidade" (
       "id" TEXT NOT NULL,
@@ -664,6 +671,7 @@ async function migrarModeloBlocoRelacional() {
 
 async function garantirUsuarioAdmin() {
   await garantirTenantPadrao(prisma);
+  console.log("Gestor Padrão garantido", GESTOR_PADRAO_ID, GESTOR_PADRAO_NOME);
 
   const email = ADMIN_EMAIL.toLowerCase();
   const senha = await bcrypt.hash(ADMIN_SENHA, 10);
@@ -703,13 +711,17 @@ async function garantirUsuarioAdmin() {
     },
   });
 
-  await prisma.usuario.updateMany({
+  const usuariosOrfaos = await prisma.usuario.updateMany({
     where: { gestorId: null },
     data: { gestorId: GESTOR_PADRAO_ID },
   });
-  await prisma.condominio.updateMany({
+  const condominiosOrfaos = await prisma.condominio.updateMany({
     where: { gestorId: null },
     data: { gestorId: GESTOR_PADRAO_ID },
+  });
+  console.log("Vínculos legados atualizados", {
+    usuarios: usuariosOrfaos.count,
+    condominios: condominiosOrfaos.count,
   });
 }
 
