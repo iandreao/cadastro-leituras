@@ -1,6 +1,8 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { Prisma, Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import {
@@ -140,6 +142,66 @@ function mensagemUnica(error: Prisma.PrismaClientKnownRequestError) {
   return "Já existe um gestor com estes dados.";
 }
 
+async function senhaProvisoriaHash() {
+  return bcrypt.hash(randomBytes(32).toString("hex"), 10);
+}
+
+async function garantirUsuarioGestorAdmin(
+  tx: Prisma.TransactionClient,
+  gestorId: string,
+  nome: string,
+  email: string,
+) {
+  const existente = await tx.usuario.findUnique({
+    where: { email },
+    select: { id: true, role: true, gestorId: true },
+  });
+
+  if (existente) {
+    if (existente.role === Role.SUPER_ADMIN) {
+      throw new Error("EMAIL_SUPER_ADMIN");
+    }
+
+    if (existente.gestorId && existente.gestorId !== gestorId) {
+      throw new Error("EMAIL_EM_USO");
+    }
+
+    await tx.usuario.update({
+      where: { id: existente.id },
+      data: {
+        nome,
+        role: Role.GESTOR_ADMIN,
+        gestorId,
+      },
+    });
+    return;
+  }
+
+  const adminDoGestor = await tx.usuario.findFirst({
+    where: { gestorId, role: Role.GESTOR_ADMIN },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  if (adminDoGestor) {
+    await tx.usuario.update({
+      where: { id: adminDoGestor.id },
+      data: { nome, email },
+    });
+    return;
+  }
+
+  await tx.usuario.create({
+    data: {
+      nome,
+      email,
+      senha: await senhaProvisoriaHash(),
+      role: Role.GESTOR_ADMIN,
+      gestorId,
+    },
+  });
+}
+
 export async function obterPerfilAdmin() {
   const acesso = await exigirSuperAdmin();
 
@@ -203,27 +265,53 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
     return { error: invalido };
   }
 
-  try {
-    if (id) {
-      const existente = await getPrisma().gestor.findUnique({
-        where: { id },
-        select: { id: true },
-      });
+  const email = dados.email;
 
-      if (!existente) {
-        return { error: "Gestor não encontrado." };
+  if (!email) {
+    return { error: "Informe um e-mail válido." };
+  }
+
+  try {
+    await getPrisma().$transaction(async (tx) => {
+      if (id) {
+        const existente = await tx.gestor.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+
+        if (!existente) {
+          throw new Error("GESTOR_NAO_ENCONTRADO");
+        }
+
+        await tx.gestor.update({
+          where: { id },
+          data: dados,
+        });
+        await garantirUsuarioGestorAdmin(tx, id, dados.nome, email);
+        return;
       }
 
-      await getPrisma().gestor.update({
-        where: { id },
+      const criado = await tx.gestor.create({
         data: dados,
       });
-    } else {
-      await getPrisma().gestor.create({
-        data: dados,
-      });
-    }
+      await garantirUsuarioGestorAdmin(tx, criado.id, dados.nome, email);
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === "GESTOR_NAO_ENCONTRADO") {
+      return { error: "Gestor não encontrado." };
+    }
+
+    if (error instanceof Error && error.message === "EMAIL_EM_USO") {
+      return { error: "Já existe uma conta com este e-mail." };
+    }
+
+    if (error instanceof Error && error.message === "EMAIL_SUPER_ADMIN") {
+      return {
+        error:
+          "Este e-mail já pertence ao Super Admin. Use o e-mail corporativo do cliente.",
+      };
+    }
+
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -235,6 +323,7 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
   }
 
   revalidatePath("/admin/gestores");
+  revalidatePath("/admin/usuarios");
   return { ok: true };
 }
 
