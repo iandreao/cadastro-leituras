@@ -3,6 +3,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "sessao";
 
+const ROTAS_PUBLICAS = [
+  "/login",
+  "/esqueceu-senha",
+  "/redefinir-senha",
+];
+
+function ehRotaPublica(pathname: string) {
+  return ROTAS_PUBLICAS.some(
+    (rota) => pathname === rota || pathname.startsWith(`${rota}/`),
+  );
+}
+
+function ehArquivoEstatico(pathname: string) {
+  return (
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    /\.[a-zA-Z0-9]+$/.test(pathname)
+  );
+}
+
+function redirecionarPara(request: NextRequest, pathname: string) {
+  return NextResponse.redirect(new URL(pathname, request.url));
+}
+
 async function sessaoDoPedido(token?: string) {
   if (!token || !process.env.AUTH_SECRET) {
     return { autenticado: false, role: null as string | null };
@@ -24,14 +48,15 @@ async function sessaoDoPedido(token?: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (ehArquivoEstatico(pathname)) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const { autenticado, role } = await sessaoDoPedido(token);
-  const isLogin = pathname.startsWith("/login");
-  const isEsqueceuSenha = pathname.startsWith("/esqueceu-senha");
-  const isRedefinirSenha = pathname.startsWith("/redefinir-senha");
   const isAuthApi = pathname.startsWith("/api/auth");
   const isResetUsuario = pathname.startsWith("/api/reset-usuario");
-  const isPaginaPublica = isLogin || isEsqueceuSenha || isRedefinirSenha;
 
   if (isAuthApi || isResetUsuario) {
     return NextResponse.next();
@@ -41,27 +66,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  if (!autenticado && !isPaginaPublica) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  if (ehRotaPublica(pathname)) {
+    if (autenticado && pathname.startsWith("/login")) {
+      return redirecionarPara(request, "/condominios");
+    }
+
+    return NextResponse.next();
   }
 
-  if (autenticado && isLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/condominios";
-    return NextResponse.redirect(url);
+  if (!autenticado) {
+    return redirecionarPara(request, "/login");
   }
 
   if (pathname.startsWith("/admin/gestores") && role === "GESTOR_ADMIN") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/usuarios";
-    return NextResponse.redirect(url);
+    return redirecionarPara(request, "/admin/usuarios");
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico).*)",
+  ],
 };
