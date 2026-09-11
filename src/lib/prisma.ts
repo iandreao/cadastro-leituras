@@ -5,6 +5,8 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
+/** Singleton: reutiliza a conexão Neon entre hot-reloads e invocações. */
+
 function criarPrismaClient() {
   const url = process.env.DATABASE_URL
     ? urlNeonComPoolerESsl(normalizarDatabaseUrl(process.env.DATABASE_URL))

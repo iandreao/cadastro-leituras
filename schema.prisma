@@ -44,6 +44,7 @@ model Usuario {
   email     String   @unique
   senha     String
   role      Role     @default(OPERADOR)
+  ativo     Boolean  @default(true)
   gestorId  String?
   gestor    Gestor?  @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   createdAt DateTime @default(now())

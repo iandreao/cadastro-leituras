@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import {
   exigirAmbienteAuth,
   repositorioUsuario,
@@ -9,6 +8,7 @@ import {
   apagarTokenPorId,
   buscarTokenRedefinicao,
 } from "@/lib/password-reset-token";
+import { hashSenha } from "@/lib/senha";
 import { resetPasswordSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const hash = await bcrypt.hash(senha, 10);
+    const hash = await hashSenha(senha);
 
     await usuarios.update({
       where: { id: usuario.id },

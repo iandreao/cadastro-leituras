@@ -32,9 +32,6 @@ export function exigirAmbienteAuth() {
 }
 
 export async function repositorioUsuario() {
-  const { garantirSchemaMultiTenant } = await import("@/lib/multi-tenant");
-  await garantirSchemaMultiTenant();
-
   const cliente = getPrisma() as { usuario?: { findUnique?: unknown } };
 
   if (!cliente.usuario?.findUnique) {

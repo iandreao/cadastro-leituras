@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import {
   exigirAmbienteAuth,
   repositorioUsuario,
   responderErroAuth,
 } from "@/lib/auth-api";
 import { applySessionCookie, createSessionToken } from "@/lib/auth";
+import { senhaConfere } from "@/lib/senha";
 import { loginSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
@@ -32,6 +32,15 @@ export async function POST(request: Request) {
     const email = parsed.data.email.toLowerCase();
     const usuario = await (await repositorioUsuario()).findUnique({
       where: { email },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        senha: true,
+        role: true,
+        gestorId: true,
+        ativo: true,
+      },
     });
 
     if (!usuario) {
@@ -41,7 +50,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const senhaOk = await bcrypt.compare(parsed.data.senha, usuario.senha);
+    if (usuario.ativo === false) {
+      return NextResponse.json(
+        { error: "🚫 Esta conta foi desativada pelo administrador." },
+        { status: 403 },
+      );
+    }
+
+    const senhaOk = await senhaConfere(parsed.data.senha, usuario.senha);
 
     if (!senhaOk) {
       return NextResponse.json(

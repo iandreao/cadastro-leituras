@@ -6,7 +6,7 @@ import { AuthFeedback } from "@/components/AuthFeedback";
 import AuthLayout from "@/components/AuthLayout";
 
 const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+  "h-12 w-full rounded-lg border border-slate-300 p-4 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
 export default function EsqueceuSenhaScreen() {
   const [email, setEmail] = useState("");
@@ -49,16 +49,16 @@ export default function EsqueceuSenhaScreen() {
 
   return (
     <AuthLayout>
-      <h2 className="text-xl font-semibold text-slate-900">
+      <h2 className="text-3xl font-bold text-slate-900">
         Esqueci minha senha
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-2 text-lg text-slate-500">
         Informe o e-mail da conta para receber o link de recuperação.
       </p>
 
-      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">
+          <span className="mb-1 block text-base font-medium text-slate-700">
             E-mail
           </span>
           <input
@@ -86,13 +86,13 @@ export default function EsqueceuSenhaScreen() {
         <button
           type="submit"
           disabled={enviando}
-          className="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full rounded-lg bg-teal-700 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {enviando ? "Enviando..." : "Enviar link de recuperação"}
         </button>
       </form>
 
-      <p className="mt-3 text-sm text-slate-600">
+      <p className="mt-4 text-base text-slate-600">
         <Link href="/login" className="font-medium text-teal-700 hover:underline">
           Voltar para o login
         </Link>

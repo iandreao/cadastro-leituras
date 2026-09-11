@@ -40,10 +40,10 @@ export async function POST(request: Request) {
     const email = parsed.data.email.toLowerCase();
     const usuario = await (await repositorioUsuario()).findUnique({
       where: { email },
-      select: { id: true, email: true },
+      select: { id: true, email: true, ativo: true },
     });
 
-    if (!usuario) {
+    if (!usuario || usuario.ativo === false) {
       return NextResponse.json({ ok: true, mensagem: MENSAGEM_OK });
     }
 

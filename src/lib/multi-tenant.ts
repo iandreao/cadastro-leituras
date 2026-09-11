@@ -83,6 +83,10 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
   );
   await executarSePossivel(
     db,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "ativo" BOOLEAN NOT NULL DEFAULT true`,
+  );
+  await executarSePossivel(
+    db,
     `ALTER TABLE "Condominio" ADD COLUMN IF NOT EXISTS "gestorId" TEXT`,
   );
   await executarSePossivel(
@@ -300,15 +304,17 @@ export function viaUnidadeDoTenant(
   return { unidade: viaCondominio(session) };
 }
 
-export async function completarSessaoTenant(session: SessionUser): Promise<SessionUser> {
+export async function completarSessaoTenant(
+  session: SessionUser,
+): Promise<SessionUser | null> {
   try {
     const usuario = await getPrisma().usuario.findUnique({
       where: { id: session.sub },
-      select: { role: true, gestorId: true },
+      select: { role: true, gestorId: true, ativo: true },
     });
 
-    if (!usuario) {
-      return session;
+    if (!usuario || usuario.ativo === false) {
+      return null;
     }
 
     return {
@@ -346,7 +352,7 @@ export async function resolverGestorIdDeCadastro(
 
   if (candidato) {
     const gestor = await getPrisma().gestor.findFirst({
-      where: { id: candidato, ativo: true },
+      where: { id: candidato },
       select: { id: true },
     });
 

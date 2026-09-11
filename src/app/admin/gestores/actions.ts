@@ -1,8 +1,7 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
 import { Prisma, Role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import {
@@ -13,6 +12,7 @@ import {
 } from "@/lib/masks";
 import { getPrisma } from "@/lib/prisma";
 import { GESTOR_PADRAO_ID, garantirTenantPadrao } from "@/lib/multi-tenant";
+import { hashSenha } from "@/lib/senha";
 
 export type GestorLista = {
   id: string;
@@ -143,7 +143,7 @@ function mensagemUnica(error: Prisma.PrismaClientKnownRequestError) {
 }
 
 async function senhaProvisoriaHash() {
-  return bcrypt.hash(randomBytes(32).toString("hex"), 10);
+  return hashSenha(randomBytes(32).toString("hex"));
 }
 
 async function garantirUsuarioGestorAdmin(

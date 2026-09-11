@@ -10,6 +10,7 @@ import {
 import { toTitleCase } from "@/lib/masks";
 import AcessoRestrito from "@/components/AcessoRestrito";
 import {
+  excluirUsuario,
   listarGestoresOpcoes,
   listarUsuarios,
   obterPerfilUsuarios,
@@ -20,10 +21,12 @@ import {
 
 function formularioVazio() {
   return {
+    id: "",
     nome: "",
     email: "",
     senha: "",
     role: "OPERADOR" as "GESTOR_ADMIN" | "OPERADOR",
+    ativo: true,
     gestorId: "",
   };
 }
@@ -51,6 +54,7 @@ export default function UsuariosPage() {
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [pending, startTransition] = useTransition();
+  const editando = Boolean(form.id);
 
   useEffect(() => {
     void carregar();
@@ -77,6 +81,54 @@ export default function UsuariosPage() {
     setAutorizado(true);
   }
 
+  function limparFormulario() {
+    setForm(formularioVazio());
+    setErro("");
+    setInfo("");
+  }
+
+  function alterar(item: UsuarioLista) {
+    setForm({
+      id: item.id,
+      nome: item.nome,
+      email: item.email,
+      senha: "",
+      role: item.role,
+      ativo: item.ativo,
+      gestorId: item.gestorId ?? "",
+    });
+    setErro("");
+    setInfo("");
+  }
+
+  function excluir(item: UsuarioLista) {
+    if (
+      !window.confirm(
+        `Excluir o usuário "${toTitleCase(item.nome)}"? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+
+    setErro("");
+    setInfo("");
+    startTransition(async () => {
+      const resultado = await excluirUsuario(item.id);
+
+      if ("error" in resultado) {
+        setErro(resultado.error);
+        return;
+      }
+
+      if (form.id === item.id) {
+        setForm(formularioVazio());
+      }
+
+      setInfo("Usuário excluído.");
+      setLista(await listarUsuarios());
+    });
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErro("");
@@ -91,8 +143,12 @@ export default function UsuariosPage() {
         return;
       }
 
-      setForm(formularioVazio());
-      setInfo("Usuário cadastrado com sucesso.");
+      limparFormulario();
+      setInfo(
+        editando
+          ? "Usuário atualizado com sucesso."
+          : "Usuário cadastrado com sucesso.",
+      );
       setLista(await listarUsuarios());
     });
   }
@@ -111,9 +167,10 @@ export default function UsuariosPage() {
     <div className={GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
-          Incluir usuário
+          {editando ? "Alterar usuário" : "Incluir usuário"}
         </h2>
         <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-4 pr-1`}>
+          <input type="hidden" name="id" value={form.id} />
           <label className="block">
             <span className="mb-1 block text-lg font-medium text-slate-700">
               Nome
@@ -148,15 +205,16 @@ export default function UsuariosPage() {
           </label>
           <label className="block">
             <span className="mb-1 block text-lg font-medium text-slate-700">
-              Senha
+              Senha{editando ? " (opcional)" : ""}
             </span>
             <input
               name="senha"
               type="password"
               value={form.senha}
               autoComplete="new-password"
-              required
-              minLength={6}
+              required={!editando}
+              minLength={editando ? undefined : 6}
+              placeholder={editando ? "Deixe em branco para manter" : undefined}
               onChange={(event) =>
                 setForm((atual) => ({ ...atual, senha: event.target.value }))
               }
@@ -180,6 +238,25 @@ export default function UsuariosPage() {
             >
               <option value="OPERADOR">Operador</option>
               <option value="GESTOR_ADMIN">Gestor</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-lg font-medium text-slate-700">
+              Status
+            </span>
+            <select
+              name="ativo"
+              value={form.ativo ? "true" : "false"}
+              onChange={(event) =>
+                setForm((atual) => ({
+                  ...atual,
+                  ativo: event.target.value === "true",
+                }))
+              }
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+            >
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
             </select>
           </label>
           {ehSuperAdmin ? (
@@ -220,13 +297,29 @@ export default function UsuariosPage() {
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
-          >
-            {pending ? "Salvando..." : "Incluir usuário"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
+            >
+              {pending
+                ? "Salvando..."
+                : editando
+                  ? "Salvar alterações"
+                  : "Incluir usuário"}
+            </button>
+            {editando ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={limparFormulario}
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-70"
+              >
+                Cancelar
+              </button>
+            ) : null}
+          </div>
         </form>
       </section>
 
@@ -255,14 +348,22 @@ export default function UsuariosPage() {
                       Gestor
                     </th>
                   ) : null}
-                  <th className="border border-gray-300 px-3 py-1 text-left font-medium whitespace-nowrap text-slate-700">
-                    Cadastro
+                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    Status
+                  </th>
+                  <th className="border border-gray-300 px-3 py-1 text-center font-medium text-slate-700">
+                    Ação
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {lista.map((item) => (
-                  <tr key={item.id} className="bg-white">
+                  <tr
+                    key={item.id}
+                    className={
+                      form.id === item.id ? "bg-teal-50/70" : "bg-white"
+                    }
+                  >
                     <td className="border border-gray-300 px-3 py-1 font-medium whitespace-nowrap text-slate-900">
                       {toTitleCase(item.nome)}
                     </td>
@@ -277,8 +378,36 @@ export default function UsuariosPage() {
                         {item.gestorNome ? toTitleCase(item.gestorNome) : "—"}
                       </td>
                     ) : null}
-                    <td className="border border-gray-300 px-3 py-1 font-mono font-normal whitespace-nowrap tabular-nums text-slate-700">
-                      {formatarData(item.createdAt)}
+                    <td className="border border-gray-300 px-3 py-1">
+                      <span
+                        className={
+                          item.ativo
+                            ? "inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-medium text-emerald-800"
+                            : "inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800"
+                        }
+                      >
+                        {item.ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="border border-gray-300 p-0 align-middle">
+                      <div className="flex flex-wrap items-center justify-center gap-2 py-1.5">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => alterar(item)}
+                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                        >
+                          Alterar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => excluir(item)}
+                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

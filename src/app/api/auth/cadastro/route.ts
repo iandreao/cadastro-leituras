@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import {
   exigirAmbienteAuth,
   repositorioUsuario,
   responderErroAuth,
 } from "@/lib/auth-api";
 import { applySessionCookie, createSessionToken } from "@/lib/auth";
+import { hashSenha } from "@/lib/senha";
 import { cadastroSchema } from "@/lib/validations";
 
 export const runtime = "nodejs";
@@ -52,12 +52,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const hash = await bcrypt.hash(senha, 10);
+    const hash = await hashSenha(senha);
     const usuario = await usuarios.create({
       data: {
         nome,
         email: emailNormalizado,
         senha: hash,
+        ativo: true,
         gestorId: GESTOR_PADRAO_ID,
       },
     });

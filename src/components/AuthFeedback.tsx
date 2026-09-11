@@ -13,9 +13,9 @@ export function AuthFeedback({
       : "border-red-200 bg-red-50 text-red-800";
 
   return (
-    <div className={`rounded-lg border px-3 py-2 shadow-sm ${estilo}`} role="status">
-      <p className="text-sm font-semibold">{titulo}</p>
-      <p className="mt-0.5 text-sm leading-5 opacity-90">{mensagem}</p>
+    <div className={`rounded-lg border p-4 text-base font-medium shadow-sm ${estilo}`} role="status">
+      <p className="font-semibold">{titulo}</p>
+      <p className="mt-0.5 leading-6 opacity-90">{mensagem}</p>
     </div>
   );
 }

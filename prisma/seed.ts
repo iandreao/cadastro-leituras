@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import {
   chaveNomeBloco,
   NOME_BLOCO_PADRAO,
@@ -11,12 +10,13 @@ import {
   SUPER_ADMIN_EMAIL,
   garantirTenantPadrao,
 } from "../src/lib/multi-tenant";
+import { hashSenha } from "../src/lib/senha";
 
 const prisma = new PrismaClient();
 
 const ADMIN_NOME = "Administrador";
 const ADMIN_EMAIL = "iandreao1308@gmail.com";
-const ADMIN_SENHA = "Admin1308";
+const ADMIN_SENHA = "Mudar@123";
 
 const TIPOS_UNIDADE = [
   "Apartamento",
@@ -674,7 +674,7 @@ async function garantirUsuarioAdmin() {
   console.log("Gestor Padrão garantido", GESTOR_PADRAO_ID, GESTOR_PADRAO_NOME);
 
   const email = ADMIN_EMAIL.toLowerCase();
-  const senha = await bcrypt.hash(ADMIN_SENHA, 10);
+  const senha = await hashSenha(ADMIN_SENHA);
 
   await prisma.usuario.upsert({
     where: { email },
@@ -693,7 +693,7 @@ async function garantirUsuarioAdmin() {
     },
   });
 
-  const senhaMaster = await bcrypt.hash(ADMIN_SENHA, 10);
+  const senhaMaster = await hashSenha(ADMIN_SENHA);
 
   await prisma.usuario.upsert({
     where: { email: SUPER_ADMIN_EMAIL },
@@ -734,7 +734,7 @@ const CNPJ_RESIDENCIAL_SOL = "11222333000181";
 const CNPJ_RESIDENCIAL_LUA = "22333444000181";
 
 async function garantirCenariosIsolamento() {
-  const senha = await bcrypt.hash(SENHA_TESTE_ISOLAMENTO, 10);
+  const senha = await hashSenha(SENHA_TESTE_ISOLAMENTO);
 
   const alfa = await prisma.gestor.upsert({
     where: { id: GESTOR_ALFA_ID },

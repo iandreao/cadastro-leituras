@@ -20,7 +20,7 @@ export default function AuthLayout({
       </section>
 
       <section className="flex items-center justify-center bg-[#f4f7f8] px-4 py-6">
-        <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:p-6">
+        <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-10 shadow-sm">
           {children}
         </div>
       </section>
