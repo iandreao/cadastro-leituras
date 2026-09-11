@@ -17,12 +17,15 @@ import {
   toTitleCase,
 } from "@/lib/masks";
 import AcessoRestrito from "@/components/AcessoRestrito";
+import { GestoresEsqueleto } from "./gestores-esqueleto";
 import {
   alternarAtivoGestor,
+  carregarPainelGestores,
   excluirGestor,
   listarGestores,
-  obterPerfilAdmin,
+  obterGestor,
   salvarGestor,
+  type GestorDetalhe,
   type GestorLista,
 } from "./actions";
 
@@ -46,7 +49,7 @@ function formularioVazio() {
   };
 }
 
-function gestorParaForm(item: GestorLista) {
+function gestorParaForm(item: GestorDetalhe) {
   const tipoPessoa: TipoPessoa =
     item.tipoPessoa === "FISICA" ? "FISICA" : "JURIDICA";
 
@@ -93,15 +96,14 @@ export default function GestoresPage() {
   }, []);
 
   async function carregar() {
-    const perfil = await obterPerfilAdmin();
+    const painel = await carregarPainelGestores();
 
-    if (!perfil.autorizado) {
+    if (!painel.autorizado) {
       setAutorizado(false);
       return;
     }
 
-    const gestores = await listarGestores();
-    setLista(gestores);
+    setLista(painel.gestores);
     setAutorizado(true);
   }
 
@@ -294,12 +296,21 @@ export default function GestoresPage() {
   }
 
   function alterar(item: GestorLista) {
-    setForm(gestorParaForm(item));
     setErro("");
     setErroCpf("");
     setInfo("");
-    setUltimoCnpjConsultado(onlyDigits(item.documento ?? ""));
-    setUltimoCepConsultado(onlyDigits(item.cep ?? ""));
+    startTransition(async () => {
+      const detalhe = await obterGestor(item.id);
+
+      if ("error" in detalhe) {
+        setErro(detalhe.error);
+        return;
+      }
+
+      setForm(gestorParaForm(detalhe));
+      setUltimoCnpjConsultado(onlyDigits(detalhe.documento ?? ""));
+      setUltimoCepConsultado(onlyDigits(detalhe.cep ?? ""));
+    });
   }
 
   function alternar(item: GestorLista) {
@@ -347,11 +358,7 @@ export default function GestoresPage() {
   }
 
   if (autorizado === null) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-lg text-slate-600 shadow-sm">
-        Verificando permissão de acesso...
-      </div>
-    );
+    return <GestoresEsqueleto />;
   }
 
   if (!autorizado) {

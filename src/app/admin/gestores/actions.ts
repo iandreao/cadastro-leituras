@@ -11,10 +11,16 @@ import {
   toTitleCase,
 } from "@/lib/masks";
 import { getPrisma } from "@/lib/prisma";
-import { GESTOR_PADRAO_ID, garantirTenantPadrao } from "@/lib/multi-tenant";
+import { GESTOR_PADRAO_ID } from "@/lib/multi-tenant";
 import { hashSenha } from "@/lib/senha";
 
 export type GestorLista = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+};
+
+export type GestorDetalhe = {
   id: string;
   nome: string;
   razaoSocial: string | null;
@@ -30,7 +36,6 @@ export type GestorLista = {
   cidade: string | null;
   estado: string | null;
   ativo: boolean;
-  createdAt: Date;
 };
 
 export type ResultadoGestor = { ok: true } | { error: string };
@@ -48,24 +53,17 @@ async function exigirSuperAdmin() {
   const session = await getSession();
 
   if (!session) {
-    return { error: "Não autenticado." as const, session: null, usuario: null };
+    return { error: "Não autenticado." as const, session: null };
   }
 
-  await garantirTenantPadrao();
-  const usuario = await getPrisma().usuario.findUnique({
-    where: { id: session.sub },
-    select: { id: true, role: true },
-  });
-
-  if (!usuario || usuario.role !== Role.SUPER_ADMIN) {
+  if (session.role !== "SUPER_ADMIN") {
     return {
       error: "Acesso restrito ao Super Admin." as const,
       session,
-      usuario,
     };
   }
 
-  return { error: null, session, usuario };
+  return { error: null, session };
 }
 
 function dadosDoFormulario(formData: FormData) {
@@ -208,7 +206,7 @@ export async function obterPerfilAdmin() {
   if (acesso.error) {
     return {
       autorizado: false as const,
-      role: acesso.usuario?.role ?? null,
+      role: acesso.session?.role ?? null,
       error: acesso.error,
     };
   }
@@ -232,6 +230,29 @@ export async function listarGestores(): Promise<GestorLista[]> {
     select: {
       id: true,
       nome: true,
+      ativo: true,
+    },
+  });
+}
+
+export async function obterGestor(id: string): Promise<GestorDetalhe | { error: string }> {
+  const acesso = await exigirSuperAdmin();
+
+  if (acesso.error) {
+    return { error: acesso.error };
+  }
+
+  const gestorId = id.trim();
+
+  if (!gestorId) {
+    return { error: "Gestor não encontrado." };
+  }
+
+  const gestor = await getPrisma().gestor.findUnique({
+    where: { id: gestorId },
+    select: {
+      id: true,
+      nome: true,
       razaoSocial: true,
       email: true,
       celular: true,
@@ -245,9 +266,41 @@ export async function listarGestores(): Promise<GestorLista[]> {
       cidade: true,
       estado: true,
       ativo: true,
-      createdAt: true,
     },
   });
+
+  if (!gestor) {
+    return { error: "Gestor não encontrado." };
+  }
+
+  return gestor;
+}
+
+export async function carregarPainelGestores() {
+  const acesso = await exigirSuperAdmin();
+
+  if (acesso.error || !acesso.session) {
+    return {
+      autorizado: false as const,
+      role: acesso.session?.role ?? null,
+      gestores: [] as GestorLista[],
+    };
+  }
+
+  const gestores = await getPrisma().gestor.findMany({
+    orderBy: { nome: "asc" },
+    select: {
+      id: true,
+      nome: true,
+      ativo: true,
+    },
+  });
+
+  return {
+    autorizado: true as const,
+    role: Role.SUPER_ADMIN,
+    gestores,
+  };
 }
 
 export async function salvarGestor(formData: FormData): Promise<ResultadoGestor> {

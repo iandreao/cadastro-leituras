@@ -116,18 +116,5 @@ export async function requireApiSession(request: Request) {
     };
   }
 
-  const { completarSessaoTenant } = await import("@/lib/multi-tenant");
-  const completa = await completarSessaoTenant(session);
-
-  if (!completa) {
-    return {
-      session: null,
-      error: NextResponse.json(
-        { error: "🚫 Esta conta foi desativada pelo administrador." },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { session: completa, error: null };
+  return { session, error: null };
 }

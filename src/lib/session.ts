@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
-import { completarSessaoTenant } from "@/lib/multi-tenant";
 
 export async function getSession() {
   const jar = await cookies();
@@ -10,11 +9,5 @@ export async function getSession() {
     return null;
   }
 
-  const session = await verifySessionToken(token);
-
-  if (!session) {
-    return null;
-  }
-
-  return completarSessaoTenant(session);
+  return verifySessionToken(token);
 }
