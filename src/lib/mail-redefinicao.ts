@@ -5,6 +5,7 @@ import {
   montarTextoEmailRecuperacao,
 } from "@/lib/email-recuperacao";
 
+// Plano gratuito Resend: remetente sandbox até autenticar domínio próprio.
 const REMETENTE_SANDBOX = "onboarding@resend.dev";
 
 export async function enviarEmailRedefinicao(email: string, token: string) {
