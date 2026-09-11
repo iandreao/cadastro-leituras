@@ -38,7 +38,44 @@ export type GestorDetalhe = {
   ativo: boolean;
 };
 
+export type CondominioVinculavel = {
+  id: string;
+  nome: string;
+};
+
 export type ResultadoGestor = { ok: true } | { error: string };
+
+const filtroCondominiosVinculaveis: Prisma.CondominioWhereInput = {
+  OR: [{ gestorId: null }, { gestorId: GESTOR_PADRAO_ID }],
+};
+
+async function vincularCondominioAoNovoGestor(
+  tx: Prisma.TransactionClient,
+  condominioId: string,
+  gestorId: string,
+) {
+  const condominio = await tx.condominio.findFirst({
+    where: {
+      id: condominioId,
+      ...filtroCondominiosVinculaveis,
+    },
+    select: { id: true },
+  });
+
+  if (!condominio) {
+    throw new Error("CONDOMINIO_INDISPONIVEL");
+  }
+
+  await tx.condominio.update({
+    where: { id: condominio.id },
+    data: { gestorId },
+  });
+
+  await tx.movimentoMensal.updateMany({
+    where: { condominioId: condominio.id },
+    data: { gestorId },
+  });
+}
 
 function textoCampo(formData: FormData, nome: string) {
   const valor = formData.get(nome);
@@ -284,22 +321,34 @@ export async function carregarPainelGestores() {
       autorizado: false as const,
       role: acesso.session?.role ?? null,
       gestores: [] as GestorLista[],
+      condominiosVinculaveis: [] as CondominioVinculavel[],
     };
   }
 
-  const gestores = await getPrisma().gestor.findMany({
-    orderBy: { nome: "asc" },
-    select: {
-      id: true,
-      nome: true,
-      ativo: true,
-    },
-  });
+  const [gestores, condominiosVinculaveis] = await Promise.all([
+    getPrisma().gestor.findMany({
+      orderBy: { nome: "asc" },
+      select: {
+        id: true,
+        nome: true,
+        ativo: true,
+      },
+    }),
+    getPrisma().condominio.findMany({
+      where: filtroCondominiosVinculaveis,
+      orderBy: { nome: "asc" },
+      select: {
+        id: true,
+        nome: true,
+      },
+    }),
+  ]);
 
   return {
     autorizado: true as const,
     role: Role.SUPER_ADMIN,
     gestores,
+    condominiosVinculaveis,
   };
 }
 
@@ -319,6 +368,7 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
   }
 
   const email = dados.email;
+  const condominioId = id ? "" : textoCampo(formData, "condominioId");
 
   if (!email) {
     return { error: "Informe um e-mail válido." };
@@ -348,10 +398,21 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
         data: dados,
       });
       await garantirUsuarioGestorAdmin(tx, criado.id, dados.nome, email);
+
+      if (condominioId) {
+        await vincularCondominioAoNovoGestor(tx, condominioId, criado.id);
+      }
     });
   } catch (error) {
     if (error instanceof Error && error.message === "GESTOR_NAO_ENCONTRADO") {
       return { error: "Gestor não encontrado." };
+    }
+
+    if (error instanceof Error && error.message === "CONDOMINIO_INDISPONIVEL") {
+      return {
+        error:
+          "O condomínio selecionado não está disponível para vínculo. Escolha um condomínio órfão ou da Administradora Master.",
+      };
     }
 
     if (error instanceof Error && error.message === "EMAIL_EM_USO") {
@@ -377,6 +438,8 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
 
   revalidatePath("/admin/gestores");
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/movimentos");
+  revalidatePath("/condominios");
   return { ok: true };
 }
 
