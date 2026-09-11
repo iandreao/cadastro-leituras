@@ -325,7 +325,7 @@ export default function UsuariosPage() {
 
       <aside className={CARTAO_LISTA}>
         <h3 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
-          Usuários do tenant
+          Usuários cadastrados
         </h3>
         {lista.length === 0 ? (
           <p className="text-lg text-slate-500">Nenhum usuário incluído.</p>
