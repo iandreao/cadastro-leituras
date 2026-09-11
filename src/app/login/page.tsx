@@ -15,9 +15,9 @@ const camposIniciais = {
 };
 
 const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+  "h-12 w-full rounded-lg border border-slate-300 p-4 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
-const rotuloClass = "mb-1 block text-sm font-medium text-slate-700";
+const rotuloClass = "mb-1 block text-base font-medium text-slate-700";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -95,21 +95,21 @@ export default function LoginPage() {
         </section>
 
         <section className="flex items-center justify-center bg-[#f4f7f8] px-4 py-6">
-          <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:p-6">
+          <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-10 shadow-sm">
             <div className="mb-4 lg:hidden">
-              <h1 className="text-xl font-semibold text-slate-900">
+              <h1 className="text-2xl font-semibold text-slate-900">
                 Gestão de Condomínio
               </h1>
             </div>
 
-            <div className="mb-4 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+            <div className="mb-6 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
               <button
                 type="button"
                 onClick={() => {
                   setModo("login");
                   setErro("");
                 }}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
                   modo === "login"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
@@ -123,7 +123,7 @@ export default function LoginPage() {
                   setModo("cadastro");
                   setErro("");
                 }}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
                   modo === "cadastro"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
@@ -133,16 +133,16 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <h2 className="text-xl font-semibold text-slate-900">
+            <h2 className="text-3xl font-bold text-slate-900">
               {modo === "login" ? "Acesse o sistema" : "Cadastre-se"}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-2 text-lg text-slate-500">
               {modo === "login"
                 ? "Use o e-mail e a senha da sua conta."
                 : "Preencha os dados para criar o primeiro acesso."}
             </p>
 
-            <form className="mt-4 space-y-3" onSubmit={onSubmit}>
+            <form className="mt-6 space-y-4" onSubmit={onSubmit}>
               {modo === "cadastro" && (
                 <label className="block">
                   <span className={rotuloClass}>Nome</span>
@@ -190,7 +190,7 @@ export default function LoginPage() {
               {modo === "login" && (
                 <Link
                   href="/esqueceu-senha"
-                  className="mb-4 block text-right text-xs text-teal-600 hover:underline"
+                  className="mb-2 block text-right text-base font-medium text-teal-700 hover:underline"
                 >
                   Esqueceu a senha?
                 </Link>
@@ -227,7 +227,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={enviando}
-                className="w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-lg bg-teal-700 px-4 py-3 text-lg font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {enviando
                   ? "Aguarde..."
