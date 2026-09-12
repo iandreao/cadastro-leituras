@@ -30,6 +30,11 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
     label: "Gestores / Clientes",
     roles: ["SUPER_ADMIN"],
   },
+  {
+    href: "/admin/vincular-condominio",
+    label: "Vincular Condomínio",
+    roles: ["SUPER_ADMIN"],
+  },
 ];
 
 export default function Sidebar({

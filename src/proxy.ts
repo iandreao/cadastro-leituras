@@ -78,7 +78,11 @@ export async function proxy(request: NextRequest) {
     return redirecionarPara(request, "/login");
   }
 
-  if (pathname.startsWith("/admin/gestores") && role === "GESTOR_ADMIN") {
+  if (
+    (pathname.startsWith("/admin/gestores") ||
+      pathname.startsWith("/admin/vincular-condominio")) &&
+    role === "GESTOR_ADMIN"
+  ) {
     return redirecionarPara(request, "/admin/usuarios");
   }
 
