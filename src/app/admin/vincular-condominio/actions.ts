@@ -9,6 +9,7 @@ export type CondominioVinculavel = {
   id: string;
   nome: string;
   gestorId: string | null;
+  gestorNome: string | null;
 };
 
 export type VinculoCondominio = {
@@ -88,13 +89,7 @@ export async function carregarPainelVinculo() {
       : condominio.gestor?.nome ?? null,
   }));
 
-  const condominios = todosCondominios
-    .filter((condominio) => ehCondominioVinculavel(condominio.gestorId))
-    .map((condominio) => ({
-      id: condominio.id,
-      nome: condominio.nome,
-      gestorId: condominio.gestorId,
-    }));
+  const condominios = vinculos;
 
   return {
     autorizado: true as const,

@@ -373,7 +373,9 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
       await garantirUsuarioGestorAdmin(tx, criado.id, dados.nome, email);
 
       if (condominioId) {
-        await transferirCondominioParaGestor(tx, condominioId, criado.id);
+        await transferirCondominioParaGestor(tx, condominioId, criado.id, {
+          somenteVinculaveis: true,
+        });
       }
     });
   } catch (error) {

@@ -21,6 +21,14 @@ const CARTAO =
 const CAMPO =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
+function rotuloCondominioSelect(condominio: CondominioVinculavel) {
+  const gestor = condominio.gestorNome
+    ? toTitleCase(condominio.gestorNome)
+    : "Órfão / Administradora Master";
+
+  return `${toTitleCase(condominio.nome)} (Gestor: ${gestor})`;
+}
+
 export default function VincularCondominioPage() {
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
   const [condominios, setCondominios] = useState<CondominioVinculavel[]>([]);
@@ -114,17 +122,17 @@ export default function VincularCondominioPage() {
     <div className={GRADE_VINCULO}>
       <section className={`${CARTAO} lg:col-span-7`}>
         <h2 className="mb-2 shrink-0 text-2xl font-medium text-slate-900">
-          Vincular condomínio
+          Gerenciar Vínculos de Condomínios
         </h2>
         <p className="mb-6 shrink-0 text-lg text-slate-600">
-          Transfira um condomínio órfão ou da Administradora Master para um
-          gestor cliente, sem perder leituras nem despesas.
+          Vincule condomínios órfãos ou transfira um condomínio de um gestor
+          para outro, sem perder leituras nem despesas.
         </p>
 
         <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-5 pr-1`}>
           <label className="block">
             <span className="mb-1 block text-lg font-medium text-slate-700">
-              Condomínio órfão / existente
+              Condomínio
             </span>
             <select
               value={condominioId}
@@ -139,7 +147,7 @@ export default function VincularCondominioPage() {
               <option value="">Selecione o condomínio</option>
               {condominios.map((condominio) => (
                 <option key={condominio.id} value={condominio.id}>
-                  {toTitleCase(condominio.nome)}
+                  {rotuloCondominioSelect(condominio)}
                 </option>
               ))}
             </select>
@@ -205,24 +213,23 @@ export default function VincularCondominioPage() {
         <div className={`${AREA_ROLAVEL} space-y-5 pr-1`}>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
             <p className="text-lg leading-7 font-medium">
-              Esta ação moverá de forma definitiva o condomínio e todo o seu
-              histórico de leituras (água, gás) e despesas para a nova
-              administradora.
+              Atenção: Esta ação vinculará condomínios órfãos ou transferirá
+              condomínios existentes (e todo o seu histórico de leituras e
+              despesas) entre administradoras de forma definitiva.
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-lg font-medium text-slate-800">
               {condominios.length === 0
-                ? "Não há condomínios órfãos ou da Administradora Master para vincular agora."
+                ? "Não há condomínios cadastrados para gerenciar agora."
                 : condominios.length === 1
-                  ? "1 condomínio disponível para transferência."
-                  : `${condominios.length} condomínios disponíveis para transferência.`}
+                  ? "1 condomínio disponível para vínculo ou transferência."
+                  : `${condominios.length} condomínios disponíveis para vínculo ou transferência.`}
             </p>
             <p className="mt-2 text-base leading-6 text-slate-600">
-              Condomínios já ligados a outro cliente não aparecem nesta lista.
-              Unidades, leituras e despesas acompanham o condomínio
-              automaticamente.
+              O select mostra o gestor atual de cada condomínio. Unidades,
+              leituras e despesas acompanham o condomínio automaticamente.
             </p>
           </div>
         </div>

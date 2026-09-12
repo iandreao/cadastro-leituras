@@ -32,7 +32,7 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
   },
   {
     href: "/admin/vincular-condominio",
-    label: "Vincular Condomínio",
+    label: "Gerenciar Condomínios",
     roles: ["SUPER_ADMIN"],
   },
 ];

@@ -13,6 +13,7 @@ export async function transferirCondominioParaGestor(
   tx: Prisma.TransactionClient,
   condominioId: string,
   novoGestorId: string,
+  opcoes?: { somenteVinculaveis?: boolean },
 ) {
   const destino = await tx.gestor.findUnique({
     where: { id: novoGestorId },
@@ -26,7 +27,7 @@ export async function transferirCondominioParaGestor(
   const condominio = await tx.condominio.findFirst({
     where: {
       id: condominioId,
-      ...filtroCondominiosVinculaveis,
+      ...(opcoes?.somenteVinculaveis ? filtroCondominiosVinculaveis : {}),
     },
     select: { id: true, gestorId: true },
   });
@@ -56,7 +57,7 @@ export function mensagemErroVinculo(error: unknown) {
   }
 
   if (error.message === "CONDOMINIO_INDISPONIVEL") {
-    return "O condomínio selecionado não está disponível para vínculo. Escolha um condomínio órfão ou da Administradora Master.";
+    return "Condomínio não encontrado ou indisponível para esta transferência.";
   }
 
   if (error.message === "GESTOR_NAO_ENCONTRADO") {
