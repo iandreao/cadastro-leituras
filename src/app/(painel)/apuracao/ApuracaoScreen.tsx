@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   dispararWhatsApp,
   linkWhatsAppCobranca,
@@ -23,6 +24,20 @@ function formatarNumeroMoeda(valor: number) {
 
 function nomeBlocoLinha(bloco: string | { nome: string }) {
   return typeof bloco === "string" ? bloco : bloco.nome;
+}
+
+function pastaArquivoCondominio(nome: string) {
+  return (
+    nome
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() || "Condominio"
+  );
+}
+
+function nomeArquivoApuracao(nomeCondominio: string, mes: number, ano: number) {
+  const mm = String(mes).padStart(2, "0");
+  return `${pastaArquivoCondominio(nomeCondominio)}/ApuraçãoDespesas_${mm}${ano}.xlsx`;
 }
 
 function normalizarTexto(valor: string) {
@@ -51,9 +66,9 @@ function ValorContabil({
   className?: string;
 }) {
   return (
-    <div className={`flex w-24 justify-between ${className}`.trim()}>
-      <span className="font-mono font-normal tabular-nums text-gray-400">R$</span>
-      <span className="font-mono font-normal tabular-nums text-slate-800">
+    <div className={`flex w-24 justify-between font-sans ${className}`.trim()}>
+      <span className="font-sans font-normal tabular-nums text-gray-400">R$</span>
+      <span className="font-sans font-normal tabular-nums text-slate-800">
         {formatarNumeroMoeda(valor)}
       </span>
     </div>
@@ -62,7 +77,7 @@ function ValorContabil({
 
 function CelulaMoeda({
   valor,
-  className = "w-28 max-w-[120px] px-2 py-1 text-right text-base text-slate-800",
+  className = "w-28 max-w-[120px] px-2 py-1 text-right text-sm font-sans text-slate-800",
 }: {
   valor: number;
   className?: string;
@@ -132,9 +147,9 @@ function lerResposta(data: RespostaApuracao | FaturaUnidade[]) {
 }
 
 const campoClass =
-  "block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+  "block h-10 w-full min-w-0 rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
-const rotuloFiltro = "mb-1 block text-sm font-medium text-slate-700";
+const rotuloFiltro = "mb-1 block text-xs font-semibold text-slate-700";
 
 const agoraBrasil = periodoBrasil();
 
@@ -251,7 +266,7 @@ function ApuracaoFiltros({
             type="button"
             disabled={botoesDesabilitados}
             onClick={onReabrir}
-            className="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
+            className="h-10 w-full rounded-lg bg-amber-600 px-4 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
           >
             {salvandoMovimento ? "Reabrindo..." : "Reabrir Movimento"}
           </button>
@@ -260,7 +275,7 @@ function ApuracaoFiltros({
             type="button"
             disabled={botoesDesabilitados}
             onClick={onFechar}
-            className="w-full rounded-lg bg-[#0b3b4a] px-4 py-2.5 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-[#0e4d61] disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
+            className="h-10 w-full rounded-lg bg-[#0b3b4a] px-4 text-sm font-semibold tracking-wide text-white uppercase shadow-sm hover:bg-[#0e4d61] disabled:cursor-not-allowed disabled:opacity-70 lg:w-auto lg:shrink-0"
           >
             {salvandoMovimento ? "Fechando..." : "Fechar Movimento"}
           </button>
@@ -486,9 +501,77 @@ export default function ApuracaoScreen({
     },
   );
 
+  const condominioSelecionado =
+    condominios.find((item) => item.id === condominioId) ?? null;
+
+  function exportarExcel() {
+    if (faturasVisiveis.length === 0) {
+      return;
+    }
+
+    const linhas = faturasVisiveis.map((item) => ({
+      Bloco: nomeBlocoLinha(item.unidade.bloco) || "—",
+      Unidade: `${item.unidade.tipoUnidade.nome} ${item.unidade.numero}`.trim(),
+      Morador: item.unidade.nomeMorador
+        ? toTitleCase(item.unidade.nomeMorador)
+        : "—",
+      "Txa Mensal": Number(item.valorEnergia),
+      "Valor Água": Number(item.valorAgua),
+      "Valor Gás": Number(item.valorGas),
+      Outros: Number(item.valorOutras),
+      "Valor Total": Number(item.valorTotal),
+    }));
+
+    linhas.push({
+      Bloco: "",
+      Unidade: "",
+      Morador: "Totais",
+      "Txa Mensal": totais.valorEnergia,
+      "Valor Água": totais.valorAgua,
+      "Valor Gás": totais.valorGas,
+      Outros: totais.valorOutras,
+      "Valor Total": totais.valorTotal,
+    });
+
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    const alcance = XLSX.utils.decode_range(planilha["!ref"] ?? "A1");
+
+    for (let linha = 1; linha <= alcance.e.r; linha += 1) {
+      for (let coluna = 3; coluna <= 7; coluna += 1) {
+        const celula = planilha[XLSX.utils.encode_cell({ r: linha, c: coluna })];
+
+        if (celula && typeof celula.v === "number") {
+          celula.z = "#,##0.00";
+        }
+      }
+    }
+
+    planilha["!cols"] = [
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 28 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 14 },
+    ];
+
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, "Apuração");
+    XLSX.writeFile(
+      livro,
+      nomeArquivoApuracao(
+        condominioSelecionado?.nome ?? "Condominio",
+        mes,
+        ano,
+      ),
+    );
+  }
+
   return (
-    <div className="w-full max-w-full space-y-3 overflow-x-hidden px-0 sm:px-2">
-      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+    <div className="w-full max-w-full space-y-3 overflow-x-hidden px-0 font-sans sm:px-2">
+      <section className="h-auto min-h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
         <ApuracaoFiltros
           condominioId={condominioId}
           mes={mes}
@@ -552,10 +635,27 @@ export default function ApuracaoScreen({
           )}
       </section>
 
-      <section className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-        <h3 className="mb-2 text-xl font-medium text-slate-900">
-          Resultado da apuração
-        </h3>
+      <section className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-2xl font-medium text-slate-900">
+            Resultado da apuração
+          </h3>
+          <button
+            type="button"
+            disabled={isLoading || faturasVisiveis.length === 0}
+            onClick={exportarExcel}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="h-4 w-4 fill-current"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm0 2.5L17.5 8H14zM8.2 11h1.6l1.1 3.1 1.1-3.1h1.6l-1.9 4.8H10.1zm6.3 0H18v1.1h-2.3v.9H17.6v1.1h-1.6v1.7h-1.5z" />
+            </svg>
+            Exportar Excel
+          </button>
+        </div>
 
         {isLoading ? (
           <IndicadorCarregamento texto="Carregando dados da apuração..." />
@@ -565,34 +665,34 @@ export default function ApuracaoScreen({
           </p>
         ) : (
           <div className="w-full max-w-full overflow-x-auto">
-            <table className="w-max min-w-full table-auto border-collapse text-base">
+            <table className="w-max min-w-full table-auto border-collapse font-sans text-sm">
               <thead className="sticky top-0 bg-white">
-                <tr className="border-b border-slate-200 text-slate-700">
-                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
+                <tr className="border-b border-slate-200 text-sm font-semibold text-slate-700">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left">
                     Bloco
                   </th>
-                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left">
                     Unidade
                   </th>
-                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left font-medium">
+                  <th className="w-0 whitespace-nowrap px-2 py-1 text-left">
                     Morador
                   </th>
-                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right">
                     Txa Mensal
                   </th>
-                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right">
                     Valor Água
                   </th>
-                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right">
                     Valor Gás
                   </th>
-                  <th className="w-24 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
+                  <th className="w-24 max-w-[120px] whitespace-nowrap px-2 py-1 text-right">
                     Outros
                   </th>
-                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right font-medium">
+                  <th className="w-28 max-w-[120px] whitespace-nowrap px-2 py-1 text-right">
                     Valor Total
                   </th>
-                  <th className="w-28 whitespace-nowrap px-2 py-1 text-center font-medium">
+                  <th className="w-28 whitespace-nowrap px-2 py-1 text-center">
                     Ação
                   </th>
                 </tr>
@@ -619,7 +719,7 @@ export default function ApuracaoScreen({
                     <CelulaMoeda valor={item.valorOutras} />
                     <CelulaMoeda
                       valor={item.valorTotal}
-                      className="w-28 max-w-[120px] px-2 py-1 text-right text-base font-medium text-slate-900"
+                      className="w-28 max-w-[120px] px-2 py-1 text-right text-sm font-medium text-slate-900"
                     />
                     <td className="whitespace-nowrap px-2 py-1 text-center">
                       <button
@@ -642,7 +742,7 @@ export default function ApuracaoScreen({
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-slate-50 text-base font-medium text-slate-900">
+                <tr className="bg-slate-50 text-sm font-medium text-slate-900">
                   <td className="whitespace-nowrap px-2 py-1 text-left" colSpan={3}>
                     Totais
                   </td>

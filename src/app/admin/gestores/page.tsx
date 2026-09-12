@@ -24,7 +24,6 @@ import {
   excluirGestor,
   obterGestor,
   salvarGestor,
-  type CondominioVinculavel,
   type GestorDetalhe,
   type GestorLista,
 } from "./actions";
@@ -46,7 +45,6 @@ function formularioVazio() {
     bairro: "",
     cidade: "",
     estado: "",
-    condominioId: "",
   };
 }
 
@@ -71,7 +69,6 @@ function gestorParaForm(item: GestorDetalhe) {
     bairro: item.bairro ?? "",
     cidade: item.cidade ?? "",
     estado: item.estado ?? "",
-    condominioId: "",
   };
 }
 
@@ -79,9 +76,6 @@ export default function GestoresPage() {
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
   const [form, setForm] = useState(formularioVazio);
   const [lista, setLista] = useState<GestorLista[]>([]);
-  const [condominiosVinculaveis, setCondominiosVinculaveis] = useState<
-    CondominioVinculavel[]
-  >([]);
   const [erro, setErro] = useState("");
   const [info, setInfo] = useState("");
   const [erroCpf, setErroCpf] = useState("");
@@ -109,7 +103,6 @@ export default function GestoresPage() {
     }
 
     setLista(painel.gestores);
-    setCondominiosVinculaveis(painel.condominiosVinculaveis);
     setAutorizado(true);
   }
 
@@ -121,7 +114,6 @@ export default function GestoresPage() {
     }
 
     setLista(painel.gestores);
-    setCondominiosVinculaveis(painel.condominiosVinculaveis);
   }
 
   function limparFormulario() {
@@ -652,36 +644,6 @@ export default function GestoresPage() {
               />
             </label>
           </div>
-
-          {!editando ? (
-            <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
-                Vincular condomínio existente
-              </span>
-              <select
-                name="condominioId"
-                value={form.condominioId}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    condominioId: event.target.value,
-                  }))
-                }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-              >
-                <option value="">Nenhum (opcional)</option>
-                {condominiosVinculaveis.map((condominio) => (
-                  <option key={condominio.id} value={condominio.id}>
-                    {toTitleCase(condominio.nome)}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-sm text-slate-500">
-                Lista condomínios órfãos ou da Administradora Master, com
-                histórico preservado.
-              </span>
-            </label>
-          ) : null}
 
           {info ? (
             <p className="rounded-lg bg-teal-50 px-3 py-2 text-lg text-teal-800">

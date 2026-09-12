@@ -13,11 +13,6 @@ import {
 import { getPrisma } from "@/lib/prisma";
 import { GESTOR_PADRAO_ID } from "@/lib/multi-tenant";
 import { hashSenha } from "@/lib/senha";
-import {
-  filtroCondominiosVinculaveis,
-  mensagemErroVinculo,
-  transferirCondominioParaGestor,
-} from "@/lib/vincular-condominio";
 
 export type GestorLista = {
   id: string;
@@ -41,11 +36,6 @@ export type GestorDetalhe = {
   cidade: string | null;
   estado: string | null;
   ativo: boolean;
-};
-
-export type CondominioVinculavel = {
-  id: string;
-  nome: string;
 };
 
 export type ResultadoGestor = { ok: true } | { error: string };
@@ -294,34 +284,22 @@ export async function carregarPainelGestores() {
       autorizado: false as const,
       role: acesso.session?.role ?? null,
       gestores: [] as GestorLista[],
-      condominiosVinculaveis: [] as CondominioVinculavel[],
     };
   }
 
-  const [gestores, condominiosVinculaveis] = await Promise.all([
-    getPrisma().gestor.findMany({
-      orderBy: { nome: "asc" },
-      select: {
-        id: true,
-        nome: true,
-        ativo: true,
-      },
-    }),
-    getPrisma().condominio.findMany({
-      where: filtroCondominiosVinculaveis,
-      orderBy: { nome: "asc" },
-      select: {
-        id: true,
-        nome: true,
-      },
-    }),
-  ]);
+  const gestores = await getPrisma().gestor.findMany({
+    orderBy: { nome: "asc" },
+    select: {
+      id: true,
+      nome: true,
+      ativo: true,
+    },
+  });
 
   return {
     autorizado: true as const,
     role: Role.SUPER_ADMIN,
     gestores,
-    condominiosVinculaveis,
   };
 }
 
@@ -341,7 +319,6 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
   }
 
   const email = dados.email;
-  const condominioId = id ? "" : textoCampo(formData, "condominioId");
 
   if (!email) {
     return { error: "Informe um e-mail válido." };
@@ -371,24 +348,10 @@ export async function salvarGestor(formData: FormData): Promise<ResultadoGestor>
         data: dados,
       });
       await garantirUsuarioGestorAdmin(tx, criado.id, dados.nome, email);
-
-      if (condominioId) {
-        await transferirCondominioParaGestor(tx, condominioId, criado.id, {
-          somenteVinculaveis: true,
-        });
-      }
     });
   } catch (error) {
     if (error instanceof Error && error.message === "GESTOR_NAO_ENCONTRADO") {
       return { error: "Gestor não encontrado." };
-    }
-
-    if (
-      error instanceof Error &&
-      (error.message === "CONDOMINIO_INDISPONIVEL" ||
-        error.message === "MESMO_GESTOR")
-    ) {
-      return { error: mensagemErroVinculo(error) };
     }
 
     if (error instanceof Error && error.message === "EMAIL_EM_USO") {
