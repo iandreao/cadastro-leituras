@@ -13,10 +13,10 @@ import {
 import { VincularCondominioEsqueleto } from "./vincular-esqueleto";
 
 const CARTAO =
-  "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:p-8";
+  "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6";
 
 const CAMPO =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-sans outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
 function rotuloCondominioSelect(condominio: CondominioVinculavel) {
   const gestor = condominio.gestorNome
@@ -116,19 +116,19 @@ export default function VincularCondominioPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 font-sans lg:grid-cols-2">
       <section className={CARTAO}>
-        <h2 className="mb-2 shrink-0 text-2xl font-medium text-slate-900">
+        <h2 className="mb-1.5 shrink-0 text-2xl font-medium text-slate-900">
           Condomínio - Vínculo Atual
         </h2>
-        <p className="mb-6 shrink-0 text-lg text-slate-600">
+        <p className="mb-5 shrink-0 text-sm text-slate-600">
           Vincule condomínios órfãos ou transfira um condomínio de um gestor
           para outro, sem perder seu histórico de leituras e despesas
         </p>
 
-        <form onSubmit={onSubmit} className="space-y-5">
+        <form onSubmit={onSubmit} className="space-y-4">
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
+            <span className="mb-1 block text-xs font-semibold text-slate-700">
               Condomínio
             </span>
             <select
@@ -151,7 +151,7 @@ export default function VincularCondominioPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
+            <span className="mb-1 block text-xs font-semibold text-slate-700">
               Novo gestor / cliente
             </span>
             <select
@@ -196,7 +196,7 @@ export default function VincularCondominioPage() {
           <button
             type="submit"
             disabled={!podeConfirmar}
-            className="w-full rounded-lg bg-teal-700 px-4 py-3 text-lg font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="h-10 w-full rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {pending ? "Transferindo..." : "Confirmar Transferência"}
           </button>
@@ -204,28 +204,28 @@ export default function VincularCondominioPage() {
       </section>
 
       <section className={CARTAO}>
-        <div className="mb-5 flex items-baseline justify-between gap-3">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
           <h3 className="text-2xl font-medium text-slate-900">
             Vínculos Atuais de Condomínios
           </h3>
-          <span className="shrink-0 text-sm font-medium text-slate-500">
+          <span className="shrink-0 text-xs font-semibold text-slate-500">
             {vinculos.length}
           </span>
         </div>
 
         {vinculos.length === 0 ? (
-          <p className="text-lg text-slate-500">
+          <p className="text-sm text-slate-500">
             Nenhum condomínio cadastrado.
           </p>
         ) : (
           <div className="max-h-[480px] overflow-y-auto pr-2">
-            <table className="min-w-full border-collapse text-lg">
+            <table className="min-w-full border-collapse font-sans text-sm">
               <thead className="sticky top-0 bg-white">
                 <tr>
-                  <th className="border-b border-slate-200 px-3 py-2.5 text-left font-medium text-slate-700">
+                  <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-700">
                     Condomínio
                   </th>
-                  <th className="border-b border-slate-200 px-3 py-2.5 text-right font-medium text-slate-700">
+                  <th className="border-b border-slate-200 px-3 py-2 text-right text-xs font-semibold text-slate-700">
                     Gestor / Administradora
                   </th>
                 </tr>
@@ -236,16 +236,16 @@ export default function VincularCondominioPage() {
                     key={item.id}
                     className="bg-white transition hover:bg-slate-50/80"
                   >
-                    <td className="border-t border-slate-200 px-3 py-2.5 font-medium text-slate-900">
+                    <td className="border-t border-slate-200 px-3 py-2 font-medium text-slate-900">
                       {toTitleCase(item.nome)}
                     </td>
-                    <td className="border-t border-slate-200 px-3 py-2.5 text-right">
+                    <td className="border-t border-slate-200 px-3 py-2 text-right">
                       {item.gestorNome ? (
-                        <span className="inline-flex rounded-full bg-teal-100 px-3 py-1 text-base font-medium text-teal-900">
+                        <span className="inline-flex rounded-full bg-teal-100 px-2.5 py-0.5 text-sm font-medium text-teal-900">
                           {toTitleCase(item.gestorNome)}
                         </span>
                       ) : (
-                        <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-base font-medium text-red-800">
+                        <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800">
                           Órfão / Administradora Master
                         </span>
                       )}
