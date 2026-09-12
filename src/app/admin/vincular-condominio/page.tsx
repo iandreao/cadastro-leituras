@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import { AuthFeedback } from "@/components/AuthFeedback";
 import AcessoRestrito from "@/components/AcessoRestrito";
-import { AREA_ROLAVEL } from "@/lib/layout-cadastro";
 import { toTitleCase } from "@/lib/masks";
 import {
   carregarPainelVinculo,
@@ -13,10 +12,8 @@ import {
 } from "./actions";
 import { VincularCondominioEsqueleto } from "./vincular-esqueleto";
 
-const GRADE_VINCULO = "grid w-full grid-cols-1 gap-6 lg:grid-cols-12";
-
 const CARTAO =
-  "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:p-10";
+  "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:p-8";
 
 const CAMPO =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
@@ -119,17 +116,17 @@ export default function VincularCondominioPage() {
   }
 
   return (
-    <div className={GRADE_VINCULO}>
-      <section className={`${CARTAO} lg:col-span-7`}>
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <section className={CARTAO}>
         <h2 className="mb-2 shrink-0 text-2xl font-medium text-slate-900">
-          Gerenciar Vínculos de Condomínios
+          Condomínio - Vínculo Atual
         </h2>
         <p className="mb-6 shrink-0 text-lg text-slate-600">
           Vincule condomínios órfãos ou transfira um condomínio de um gestor
-          para outro, sem perder leituras nem despesas.
+          para outro, sem perder seu histórico de leituras e despesas
         </p>
 
-        <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-5 pr-1`}>
+        <form onSubmit={onSubmit} className="space-y-5">
           <label className="block">
             <span className="mb-1 block text-lg font-medium text-slate-700">
               Condomínio
@@ -206,57 +203,30 @@ export default function VincularCondominioPage() {
         </form>
       </section>
 
-      <aside className={`${CARTAO} lg:col-span-5`}>
-        <h3 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
-          Atenção
-        </h3>
-        <div className={`${AREA_ROLAVEL} space-y-5 pr-1`}>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
-            <p className="text-lg leading-7 font-medium">
-              Atenção: Esta ação vinculará condomínios órfãos ou transferirá
-              condomínios existentes (e todo o seu histórico de leituras e
-              despesas) entre administradoras de forma definitiva.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-lg font-medium text-slate-800">
-              {condominios.length === 0
-                ? "Não há condomínios cadastrados para gerenciar agora."
-                : condominios.length === 1
-                  ? "1 condomínio disponível para vínculo ou transferência."
-                  : `${condominios.length} condomínios disponíveis para vínculo ou transferência.`}
-            </p>
-            <p className="mt-2 text-base leading-6 text-slate-600">
-              O select mostra o gestor atual de cada condomínio. Unidades,
-              leituras e despesas acompanham o condomínio automaticamente.
-            </p>
-          </div>
+      <section className={CARTAO}>
+        <div className="mb-5 flex items-baseline justify-between gap-3">
+          <h3 className="text-2xl font-medium text-slate-900">
+            Vínculos Atuais de Condomínios
+          </h3>
+          <span className="shrink-0 text-sm font-medium text-slate-500">
+            {vinculos.length}
+          </span>
         </div>
-      </aside>
 
-      <section className={`${CARTAO} lg:col-span-12`}>
-        <h3 className="mb-2 shrink-0 text-2xl font-medium text-slate-900">
-          Vínculos Atuais de Condomínios
-        </h3>
-        <p className="mb-5 shrink-0 text-lg text-slate-600">
-          Visão geral de todos os condomínios e da administradora responsável
-          por cada um.
-        </p>
         {vinculos.length === 0 ? (
           <p className="text-lg text-slate-500">
             Nenhum condomínio cadastrado.
           </p>
         ) : (
-          <div className={`${AREA_ROLAVEL} overflow-x-auto rounded-xl border border-slate-200`}>
+          <div className="max-h-[480px] overflow-y-auto pr-2">
             <table className="min-w-full border-collapse text-lg">
-              <thead className="sticky top-0 bg-slate-50">
+              <thead className="sticky top-0 bg-white">
                 <tr>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-700">
+                  <th className="border-b border-slate-200 px-3 py-2.5 text-left font-medium text-slate-700">
                     Condomínio
                   </th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left font-medium text-slate-700">
-                    Gestor / Administradora Responsável
+                  <th className="border-b border-slate-200 px-3 py-2.5 text-right font-medium text-slate-700">
+                    Gestor / Administradora
                   </th>
                 </tr>
               </thead>
@@ -266,10 +236,10 @@ export default function VincularCondominioPage() {
                     key={item.id}
                     className="bg-white transition hover:bg-slate-50/80"
                   >
-                    <td className="border-t border-slate-200 px-4 py-3 font-medium text-slate-900">
+                    <td className="border-t border-slate-200 px-3 py-2.5 font-medium text-slate-900">
                       {toTitleCase(item.nome)}
                     </td>
-                    <td className="border-t border-slate-200 px-4 py-3">
+                    <td className="border-t border-slate-200 px-3 py-2.5 text-right">
                       {item.gestorNome ? (
                         <span className="inline-flex rounded-full bg-teal-100 px-3 py-1 text-base font-medium text-teal-900">
                           {toTitleCase(item.gestorNome)}
