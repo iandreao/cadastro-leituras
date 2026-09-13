@@ -59,6 +59,7 @@ export async function POST(request: Request) {
         email: emailNormalizado,
         senha: hash,
         ativo: true,
+        primeiroAcesso: false,
         gestorId: GESTOR_PADRAO_ID,
       },
     });
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
       email: usuario.email,
       role: usuario.role ?? "OPERADOR",
       gestorId: usuario.gestorId ?? GESTOR_PADRAO_ID,
+      primeiroAcesso: false,
     });
 
     return applySessionCookie(
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
           email: usuario.email,
           role: usuario.role ?? "OPERADOR",
           gestorId: usuario.gestorId ?? GESTOR_PADRAO_ID,
+          primeiroAcesso: false,
         },
       }),
       token,

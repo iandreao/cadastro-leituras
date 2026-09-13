@@ -29,7 +29,11 @@ function redirecionarPara(request: NextRequest, pathname: string) {
 
 async function sessaoDoPedido(token?: string) {
   if (!token || !process.env.AUTH_SECRET) {
-    return { autenticado: false, role: null as string | null };
+    return {
+      autenticado: false,
+      role: null as string | null,
+      primeiroAcesso: false,
+    };
   }
 
   try {
@@ -40,9 +44,14 @@ async function sessaoDoPedido(token?: string) {
     return {
       autenticado: true,
       role: typeof payload.role === "string" ? payload.role : null,
+      primeiroAcesso: payload.primeiroAcesso === true,
     };
   } catch {
-    return { autenticado: false, role: null as string | null };
+    return {
+      autenticado: false,
+      role: null as string | null,
+      primeiroAcesso: false,
+    };
   }
 }
 
@@ -54,9 +63,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const { autenticado, role } = await sessaoDoPedido(token);
+  const { autenticado, role, primeiroAcesso } = await sessaoDoPedido(token);
   const isAuthApi = pathname.startsWith("/api/auth");
   const isResetUsuario = pathname.startsWith("/api/reset-usuario");
+  const isNovaSenha = pathname === "/nova-senha" || pathname.startsWith("/nova-senha/");
 
   if (isAuthApi || isResetUsuario) {
     return NextResponse.next();
@@ -66,9 +76,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
+  if (pathname.startsWith("/api") && primeiroAcesso) {
+    return NextResponse.json(
+      { error: "Defina uma nova senha para continuar." },
+      { status: 403 },
+    );
+  }
+
   if (ehRotaPublica(pathname)) {
     if (autenticado && pathname.startsWith("/login")) {
-      return redirecionarPara(request, "/condominios");
+      return redirecionarPara(
+        request,
+        primeiroAcesso ? "/nova-senha" : "/condominios",
+      );
     }
 
     return NextResponse.next();
@@ -76,6 +96,14 @@ export async function proxy(request: NextRequest) {
 
   if (!autenticado) {
     return redirecionarPara(request, "/login");
+  }
+
+  if (primeiroAcesso && !isNovaSenha) {
+    return redirecionarPara(request, "/nova-senha");
+  }
+
+  if (!primeiroAcesso && isNovaSenha) {
+    return redirecionarPara(request, "/condominios");
   }
 
   if (

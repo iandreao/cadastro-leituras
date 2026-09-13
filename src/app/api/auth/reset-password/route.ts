@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     await usuarios.update({
       where: { id: usuario.id },
-      data: { senha: hash },
+      data: { senha: hash, primeiroAcesso: false },
     });
 
     await apagarTokenPorId(registro.id);

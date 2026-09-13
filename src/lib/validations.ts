@@ -35,6 +35,16 @@ export const resetPasswordSchema = z
     path: ["confirmarSenha"],
   });
 
+export const novaSenhaSchema = z
+  .object({
+    senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
+    confirmarSenha: z.string().min(6, "Confirme a nova senha."),
+  })
+  .refine((data) => data.senha === data.confirmarSenha, {
+    message: "As senhas não coincidem.",
+    path: ["confirmarSenha"],
+  });
+
 export const condominioSchema = z
   .object({
     tipoDocumento: z.enum(["cpf", "cnpj"]).optional(),

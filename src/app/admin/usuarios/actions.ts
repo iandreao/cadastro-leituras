@@ -236,6 +236,7 @@ export async function salvarUsuario(
           senha: await hashSenha(senha),
           role,
           ativo,
+          primeiroAcesso: false,
           gestorId,
         },
       });

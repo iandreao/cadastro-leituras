@@ -1,7 +1,6 @@
 "use server";
 
 import { Prisma, Role } from "@prisma/client";
-import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import {
@@ -140,8 +139,10 @@ function mensagemUnica(error: Prisma.PrismaClientKnownRequestError) {
   return "Já existe um gestor com estes dados.";
 }
 
-async function senhaProvisoriaHash() {
-  return hashSenha(randomBytes(32).toString("hex"));
+const SENHA_INICIAL_GESTOR = "Mudar@123";
+
+async function senhaInicialGestorHash() {
+  return hashSenha(SENHA_INICIAL_GESTOR);
 }
 
 async function garantirUsuarioGestorAdmin(
@@ -193,8 +194,9 @@ async function garantirUsuarioGestorAdmin(
     data: {
       nome,
       email,
-      senha: await senhaProvisoriaHash(),
+      senha: await senhaInicialGestorHash(),
       role: Role.GESTOR_ADMIN,
+      primeiroAcesso: true,
       gestorId,
     },
   });

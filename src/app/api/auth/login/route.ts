@@ -40,6 +40,7 @@ export async function POST(request: Request) {
         role: true,
         gestorId: true,
         ativo: true,
+        primeiroAcesso: true,
       },
     });
 
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       email: usuario.email,
       role: usuario.role ?? "OPERADOR",
       gestorId: usuario.gestorId ?? null,
+      primeiroAcesso: usuario.primeiroAcesso === true,
     });
 
     return applySessionCookie(
@@ -82,6 +84,7 @@ export async function POST(request: Request) {
           email: usuario.email,
           role: usuario.role ?? "OPERADOR",
           gestorId: usuario.gestorId ?? null,
+          primeiroAcesso: usuario.primeiroAcesso === true,
         },
       }),
       token,

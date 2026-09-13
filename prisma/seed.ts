@@ -682,6 +682,7 @@ async function garantirUsuarioAdmin() {
       nome: ADMIN_NOME,
       senha,
       role: "SUPER_ADMIN",
+      primeiroAcesso: false,
       gestorId: GESTOR_PADRAO_ID,
     },
     create: {
@@ -689,6 +690,7 @@ async function garantirUsuarioAdmin() {
       email,
       senha,
       role: "SUPER_ADMIN",
+      primeiroAcesso: false,
       gestorId: GESTOR_PADRAO_ID,
     },
   });
@@ -700,6 +702,7 @@ async function garantirUsuarioAdmin() {
     update: {
       nome: "Super Admin",
       role: "SUPER_ADMIN",
+      primeiroAcesso: false,
       gestorId: GESTOR_PADRAO_ID,
     },
     create: {
@@ -707,6 +710,7 @@ async function garantirUsuarioAdmin() {
       email: SUPER_ADMIN_EMAIL,
       senha: senhaMaster,
       role: "SUPER_ADMIN",
+      primeiroAcesso: false,
       gestorId: GESTOR_PADRAO_ID,
     },
   });
@@ -782,6 +786,7 @@ async function garantirCenariosIsolamento() {
       nome: "Gestor Alfa",
       senha,
       role: "GESTOR_ADMIN",
+      primeiroAcesso: false,
       gestorId: alfa.id,
     },
     create: {
@@ -789,6 +794,7 @@ async function garantirCenariosIsolamento() {
       email: "alfa@condosys.com",
       senha,
       role: "GESTOR_ADMIN",
+      primeiroAcesso: false,
       gestorId: alfa.id,
     },
   });
@@ -799,6 +805,7 @@ async function garantirCenariosIsolamento() {
       nome: "Gestor Beta",
       senha,
       role: "GESTOR_ADMIN",
+      primeiroAcesso: false,
       gestorId: beta.id,
     },
     create: {
@@ -806,6 +813,7 @@ async function garantirCenariosIsolamento() {
       email: "beta@condosys.com",
       senha,
       role: "GESTOR_ADMIN",
+      primeiroAcesso: false,
       gestorId: beta.id,
     },
   });

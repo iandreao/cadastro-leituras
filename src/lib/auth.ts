@@ -11,6 +11,7 @@ export type SessionUser = {
   email: string;
   role: RoleSessao;
   gestorId: string | null;
+  primeiroAcesso: boolean;
 };
 
 function getSecret() {
@@ -37,6 +38,7 @@ export async function createSessionToken(user: SessionUser) {
     email: user.email,
     role: user.role,
     gestorId: user.gestorId,
+    primeiroAcesso: user.primeiroAcesso,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.sub)
@@ -61,6 +63,7 @@ export async function verifySessionToken(
       email: payload.email,
       role: roleDaClaim(payload.role) ?? "OPERADOR",
       gestorId: typeof payload.gestorId === "string" ? payload.gestorId : null,
+      primeiroAcesso: payload.primeiroAcesso === true,
     };
   } catch {
     return null;

@@ -49,14 +49,17 @@ export default function LoginPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = (await response.json()) as { error?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        usuario?: { primeiroAcesso?: boolean };
+      };
 
       if (!response.ok) {
         setErro(data.error ?? "Não foi possível continuar.");
         return;
       }
 
-      router.push("/condominios");
+      router.push(data.usuario?.primeiroAcesso ? "/nova-senha" : "/condominios");
       router.refresh();
     } catch {
       setErro("Falha de conexão. Tente novamente.");
