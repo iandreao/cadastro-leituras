@@ -31,6 +31,8 @@ export type GestorOpcao = {
 
 export type ResultadoUsuario = { ok: true } | { error: string };
 
+const SENHA_INICIAL_USUARIO = "Mudar@123";
+
 function textoCampo(formData: FormData, nome: string) {
   const valor = formData.get(nome);
   return typeof valor === "string" ? valor.trim() : "";
@@ -189,10 +191,6 @@ export async function salvarUsuario(
     return { error: "Informe um e-mail válido." };
   }
 
-  if (!id && senha.length < 6) {
-    return { error: "A senha deve ter pelo menos 6 caracteres." };
-  }
-
   if (id && senha && senha.length < 6) {
     return { error: "A senha deve ter pelo menos 6 caracteres." };
   }
@@ -225,7 +223,9 @@ export async function salvarUsuario(
           role,
           ativo,
           gestorId,
-          ...(senha ? { senha: await hashSenha(senha) } : {}),
+          ...(senha
+            ? { senha: await hashSenha(senha), primeiroAcesso: false }
+            : {}),
         },
       });
     } else {
@@ -233,10 +233,10 @@ export async function salvarUsuario(
         data: {
           nome,
           email,
-          senha: await hashSenha(senha),
+          senha: await hashSenha(SENHA_INICIAL_USUARIO),
           role,
           ativo,
-          primeiroAcesso: false,
+          primeiroAcesso: true,
           gestorId,
         },
       });

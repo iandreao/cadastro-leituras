@@ -19,6 +19,14 @@ import {
   type UsuarioLista,
 } from "./actions";
 
+const CAMPO =
+  "h-10 w-full rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const ROTULO = "mb-1 block text-xs font-semibold text-slate-700";
+const BOTAO_PRIMARIO =
+  "inline-flex h-10 items-center justify-center rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70";
+const BOTAO_SECUNDARIO =
+  "inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70";
+
 function formularioVazio() {
   return {
     id: "",
@@ -147,7 +155,7 @@ export default function UsuariosPage() {
       setInfo(
         editando
           ? "Usuário atualizado com sucesso."
-          : "Usuário cadastrado com sucesso.",
+          : "Usuário cadastrado. Senha inicial: Mudar@123. No primeiro login será obrigatório alterá-la.",
       );
       setLista(await listarUsuarios());
     });
@@ -155,7 +163,7 @@ export default function UsuariosPage() {
 
   if (autorizado === null) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-lg text-slate-600 shadow-sm" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 font-sans text-sm text-slate-600 shadow-sm" />
     );
   }
 
@@ -164,17 +172,15 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={`${GRADE_CADASTRO} font-sans`}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
           {editando ? "Alterar usuário" : "Incluir usuário"}
         </h2>
-        <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-4 pr-1`}>
+        <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-3 pr-1`}>
           <input type="hidden" name="id" value={form.id} />
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Nome
-            </span>
+            <span className={ROTULO}>Nome</span>
             <input
               name="nome"
               value={form.nome}
@@ -184,13 +190,11 @@ export default function UsuariosPage() {
               onChange={(event) =>
                 setForm((atual) => ({ ...atual, nome: event.target.value }))
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className={CAMPO}
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              E-mail
-            </span>
+            <span className={ROTULO}>E-mail</span>
             <input
               name="email"
               type="email"
@@ -200,31 +204,33 @@ export default function UsuariosPage() {
               onChange={(event) =>
                 setForm((atual) => ({ ...atual, email: event.target.value }))
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className={CAMPO}
             />
           </label>
+          {editando ? (
+            <label className="block">
+              <span className={ROTULO}>Senha (opcional)</span>
+              <input
+                name="senha"
+                type="password"
+                value={form.senha}
+                autoComplete="new-password"
+                minLength={6}
+                placeholder="Deixe em branco para manter"
+                onChange={(event) =>
+                  setForm((atual) => ({ ...atual, senha: event.target.value }))
+                }
+                className={CAMPO}
+              />
+            </label>
+          ) : (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              A senha inicial será <strong>Mudar@123</strong>. No primeiro
+              acesso o usuário será obrigado a defini-la.
+            </p>
+          )}
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Senha{editando ? " (opcional)" : ""}
-            </span>
-            <input
-              name="senha"
-              type="password"
-              value={form.senha}
-              autoComplete="new-password"
-              required={!editando}
-              minLength={editando ? undefined : 6}
-              placeholder={editando ? "Deixe em branco para manter" : undefined}
-              onChange={(event) =>
-                setForm((atual) => ({ ...atual, senha: event.target.value }))
-              }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Perfil
-            </span>
+            <span className={ROTULO}>Perfil</span>
             <select
               name="role"
               value={form.role}
@@ -234,16 +240,14 @@ export default function UsuariosPage() {
                   role: event.target.value as "GESTOR_ADMIN" | "OPERADOR",
                 }))
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className={CAMPO}
             >
               <option value="OPERADOR">Operador</option>
               <option value="GESTOR_ADMIN">Gestor</option>
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
-              Status
-            </span>
+            <span className={ROTULO}>Status</span>
             <select
               name="ativo"
               value={form.ativo ? "true" : "false"}
@@ -253,7 +257,7 @@ export default function UsuariosPage() {
                   ativo: event.target.value === "true",
                 }))
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className={CAMPO}
             >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>
@@ -261,9 +265,7 @@ export default function UsuariosPage() {
           </label>
           {ehSuperAdmin ? (
             <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
-                Gestor / Cliente
-              </span>
+              <span className={ROTULO}>Gestor / Cliente</span>
               <select
                 name="gestorId"
                 required
@@ -274,7 +276,7 @@ export default function UsuariosPage() {
                     gestorId: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={CAMPO}
               >
                 <option value="">Selecione o gestor</option>
                 {gestores.map((gestor) => (
@@ -287,22 +289,18 @@ export default function UsuariosPage() {
           ) : null}
 
           {info ? (
-            <p className="rounded-lg bg-teal-50 px-3 py-2 text-lg text-teal-800">
+            <p className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
               {info}
             </p>
           ) : null}
           {erro ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-lg text-red-700">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {erro}
             </p>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-teal-700 px-4 py-2.5 text-lg font-medium text-white hover:bg-teal-800 disabled:opacity-70"
-            >
+            <button type="submit" disabled={pending} className={BOTAO_PRIMARIO}>
               {pending
                 ? "Salvando..."
                 : editando
@@ -314,7 +312,7 @@ export default function UsuariosPage() {
                 type="button"
                 disabled={pending}
                 onClick={limparFormulario}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-70"
+                className={BOTAO_SECUNDARIO}
               >
                 Cancelar
               </button>
@@ -328,30 +326,30 @@ export default function UsuariosPage() {
           Usuários cadastrados
         </h3>
         {lista.length === 0 ? (
-          <p className="text-lg text-slate-500">Nenhum usuário incluído.</p>
+          <p className="text-sm text-slate-500">Nenhum usuário incluído.</p>
         ) : (
           <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
-            <table className="w-full border-collapse text-base">
+            <table className="w-full border-collapse font-sans text-sm">
               <thead className="sticky top-0 bg-slate-50">
                 <tr>
-                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                  <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                     Nome
                   </th>
-                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                  <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                     E-mail
                   </th>
-                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                  <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                     Perfil
                   </th>
                   {ehSuperAdmin ? (
-                    <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                    <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                       Gestor
                     </th>
                   ) : null}
-                  <th className="border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
+                  <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                     Status
                   </th>
-                  <th className="border border-gray-300 px-3 py-1 text-center font-medium text-slate-700">
+                  <th className="border border-gray-300 px-3 py-1 text-center text-xs font-semibold text-slate-700">
                     Ação
                   </th>
                 </tr>
@@ -367,7 +365,7 @@ export default function UsuariosPage() {
                     <td className="border border-gray-300 px-3 py-1 font-medium whitespace-nowrap text-slate-900">
                       {toTitleCase(item.nome)}
                     </td>
-                    <td className="border border-gray-300 px-3 py-1 font-mono font-normal whitespace-nowrap text-slate-700">
+                    <td className="border border-gray-300 px-3 py-1 font-normal whitespace-nowrap text-slate-700">
                       {item.email}
                     </td>
                     <td className="border border-gray-300 px-3 py-1 text-slate-700">
@@ -382,8 +380,8 @@ export default function UsuariosPage() {
                       <span
                         className={
                           item.ativo
-                            ? "inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-medium text-emerald-800"
-                            : "inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800"
+                            ? "inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"
+                            : "inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800"
                         }
                       >
                         {item.ativo ? "Ativo" : "Inativo"}
@@ -395,7 +393,7 @@ export default function UsuariosPage() {
                           type="button"
                           disabled={pending}
                           onClick={() => alterar(item)}
-                          className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
+                          className="inline-flex h-8 items-center rounded-md bg-sky-400 px-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-sky-500 disabled:opacity-70"
                         >
                           Alterar
                         </button>
@@ -403,7 +401,7 @@ export default function UsuariosPage() {
                           type="button"
                           disabled={pending}
                           onClick={() => excluir(item)}
-                          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-red-700"
+                          className="inline-flex h-8 items-center rounded-md bg-red-600 px-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-red-700 disabled:opacity-70"
                         >
                           Excluir
                         </button>
