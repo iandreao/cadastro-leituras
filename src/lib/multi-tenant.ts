@@ -91,6 +91,10 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
   );
   await executarSePossivel(
     db,
+    `ALTER TABLE "Condominio" ADD COLUMN IF NOT EXISTS "chavePix" TEXT`,
+  );
+  await executarSePossivel(
+    db,
     `CREATE INDEX IF NOT EXISTS "users_gestorId_idx" ON "users"("gestorId")`,
   );
   await executarSePossivel(

@@ -3,6 +3,8 @@ import { onlyDigits, toTitleCase } from "@/lib/masks";
 
 const LARGURA_ROTULO_COBRANCA = 11;
 const LARGURA_VALOR_COBRANCA = 6;
+export const CHAVE_PIX_FALLBACK =
+  "68647341000197 (Condominio Edifício Venetto)";
 
 function formatarValorCobranca(valor: number) {
   return Number(valor).toLocaleString("pt-BR", {
@@ -27,6 +29,17 @@ function linhaValorMonoespace(rotulo: string, valorFormatado: string) {
   return `${etiqueta} ${blocoValor}`;
 }
 
+function linhaPagamentoPix(chavePix?: string | null, nomeCondominio?: string) {
+  const chave = chavePix?.trim();
+  const destino = chave
+    ? nomeCondominio?.trim()
+      ? `${chave} (${toTitleCase(nomeCondominio)})`
+      : chave
+    : CHAVE_PIX_FALLBACK;
+
+  return `O valor Total deve ser pago até o quinto dia, a contar do recebimento desta mensagem, via chave Pix ${destino}.`;
+}
+
 export function montarMensagemCobranca(dados: {
   nomeMorador: string;
   mes: number;
@@ -36,6 +49,8 @@ export function montarMensagemCobranca(dados: {
   valorGas: number;
   valorOutras: number;
   valorTotal: number;
+  chavePix?: string | null;
+  nomeCondominio?: string | null;
 }) {
   const morador = dados.nomeMorador.trim()
     ? toTitleCase(dados.nomeMorador)
@@ -58,7 +73,7 @@ export function montarMensagemCobranca(dados: {
     "",
     `\`\`\`\n${tabela}\n\`\`\``,
     "",
-    "O valor Total deve ser pago até o quinto dia, a contar do recebimento desta mensagem, via chave Pix 68647341000197 (Condominio Edifício Venetto).",
+    linhaPagamentoPix(dados.chavePix, dados.nomeCondominio ?? undefined),
   ].join("\n");
 }
 

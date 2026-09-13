@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export type CondominioResumo = {
   id: string;
   nome: string;
+  chavePix?: string | null;
 };
 
 export function useCondominiosResumo(iniciais: CondominioResumo[] = []) {

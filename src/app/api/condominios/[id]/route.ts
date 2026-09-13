@@ -40,6 +40,7 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const cnpj = onlyDigits(parsed.data.cnpj);
+    const chavePix = parsed.data.chavePix?.trim() || null;
     const outro = await prisma.condominio.findUnique({ where: { cnpj } });
 
     if (outro && outro.id !== id) {
@@ -57,6 +58,7 @@ export async function PUT(request: Request, context: RouteContext) {
         endereco: toTitleCase(parsed.data.endereco),
         email: parsed.data.email.toLowerCase(),
         celular: onlyDigits(parsed.data.celular),
+        chavePix,
       },
     });
 

@@ -92,6 +92,7 @@ function CelulaMoeda({
 type Condominio = {
   id: string;
   nome: string;
+  chavePix?: string | null;
 };
 
 type FaturaUnidade = {
@@ -468,6 +469,8 @@ export default function ApuracaoScreen({
         valorGas: item.valorGas,
         valorOutras: item.valorOutras,
         valorTotal: item.valorTotal,
+        chavePix: condominioSelecionado?.chavePix,
+        nomeCondominio: condominioSelecionado?.nome,
       }),
     );
 

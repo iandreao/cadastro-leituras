@@ -48,6 +48,11 @@ export const condominioSchema = z
         (value) => onlyDigits(value).length >= 10,
         "Informe um celular válido.",
       ),
+    chavePix: z
+      .string()
+      .trim()
+      .max(120, "A chave Pix deve ter no máximo 120 caracteres.")
+      .optional(),
   })
   .strip()
   .superRefine((data, ctx) => {

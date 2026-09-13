@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const condominios = await prisma.condominio.findMany({
       where,
       orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
+      select: { id: true, nome: true, chavePix: true },
     });
     return NextResponse.json(condominios);
   }
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     }
 
     const cnpj = onlyDigits(parsed.data.cnpj);
+    const chavePix = parsed.data.chavePix?.trim() || null;
     const existente = await prisma.condominio.findUnique({ where: { cnpj } });
 
     if (existente) {
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
         endereco: toTitleCase(parsed.data.endereco),
         email: parsed.data.email.toLowerCase(),
         celular: onlyDigits(parsed.data.celular),
+        chavePix,
         gestorId,
       },
     });

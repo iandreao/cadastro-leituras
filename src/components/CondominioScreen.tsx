@@ -30,6 +30,7 @@ type Condominio = {
   endereco: string;
   email: string;
   celular: string;
+  chavePix?: string | null;
   temLeitura?: boolean;
   gestorId?: string | null;
   gestor?: { id: string; nome: string } | null;
@@ -47,6 +48,7 @@ function formularioVazio(gestorIdSessao = "") {
     endereco: "",
     email: "",
     celular: "",
+    chavePix: "",
     gestorId: gestorIdSessao,
   };
 }
@@ -226,6 +228,7 @@ export default function CondominioScreen({
       endereco: toTitleCase(item.endereco),
       email: item.email,
       celular: maskCelular(item.celular),
+      chavePix: item.chavePix ?? "",
       gestorId: item.gestorId ?? gestorPadrao,
     });
     setEditandoId(item.id);
@@ -294,6 +297,7 @@ export default function CondominioScreen({
           endereco: toTitleCase(form.endereco),
           email: form.email,
           celular: form.celular,
+          chavePix: form.chavePix.trim(),
           tipoDocumento,
           ...(podeEscolherGestor ? { gestorId: form.gestorId } : {}),
         }),
@@ -456,6 +460,27 @@ export default function CondominioScreen({
             }
             placeholder="(00) 00000-0000"
           />
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-slate-700">
+              Chave Pix do Condomínio
+            </span>
+            <input
+              type="text"
+              name="condominio-chave-pix"
+              value={form.chavePix}
+              disabled={!cpfValido}
+              autoComplete="off"
+              maxLength={120}
+              placeholder="CPF, CNPJ, e-mail, celular ou chave aleatória"
+              onChange={(event) =>
+                setForm((atual) => ({
+                  ...atual,
+                  chavePix: event.target.value,
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+            />
+          </label>
 
           {info && (
             <p className="rounded-lg bg-teal-50 px-3 py-2 text-lg text-teal-800">

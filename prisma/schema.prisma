@@ -73,6 +73,7 @@ model Condominio {
   endereco        String
   email           String
   celular         String
+  chavePix        String?
   gestorId        String?
   gestor          Gestor?         @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   createdAt       DateTime        @default(now())
