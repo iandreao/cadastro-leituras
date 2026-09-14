@@ -5,7 +5,7 @@ import {
   montarTextoEmailRecuperacao,
 } from "@/lib/email-recuperacao";
 
-const REMETENTE_PADRAO = "contato@condominiovenetto.app.br";
+const REMETENTE_PADRAO = "contato@condominiovenetto.com.br";
 
 export async function enviarEmailRedefinicao(email: string, token: string) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
