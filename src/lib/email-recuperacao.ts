@@ -2,16 +2,8 @@ const AZUL_BOTAO = "#2563eb";
 const TEXTO = "#334155";
 const FUNDO = "#f1f5f9";
 
-export function montarHtmlEmailRecuperacao(
-  resetUrl: string,
-  contaOriginal?: string,
-) {
+export function montarHtmlEmailRecuperacao(resetUrl: string) {
   const url = resetUrl.replace(/"/g, "&quot;");
-  const avisoSandbox = contaOriginal
-    ? `<p style="margin:0 0 16px;color:${TEXTO};font-size:14px;line-height:1.6;">
-                  <strong>Modo teste Resend:</strong> esta mensagem foi entregue ao e-mail da conta Resend porque o domínio ainda não está verificado. Conta solicitante: ${contaOriginal.replace(/</g, "")}.
-                </p>`
-    : "";
 
   return `
 <!DOCTYPE html>
@@ -38,7 +30,6 @@ export function montarHtmlEmailRecuperacao(
             </tr>
             <tr>
               <td style="padding:28px;">
-                ${avisoSandbox}
                 <p style="margin:0 0 16px;color:${TEXTO};font-size:15px;line-height:1.6;">
                   Olá! Recebemos uma solicitação para redefinir a senha da sua conta. Se você não fez este pedido, pode ignorar este e-mail com segurança. Caso contrário, clique no botão abaixo para escolher sua nova senha:
                 </p>
@@ -65,21 +56,13 @@ export function montarHtmlEmailRecuperacao(
   `.trim();
 }
 
-export function montarTextoEmailRecuperacao(
-  resetUrl: string,
-  contaOriginal?: string,
-) {
+export function montarTextoEmailRecuperacao(resetUrl: string) {
   return [
     "Recuperação de senha - Portal do Condomínio",
-    contaOriginal
-      ? `Modo teste Resend: entregue ao e-mail da conta Resend. Conta solicitante: ${contaOriginal}.`
-      : "",
     "",
     "Olá! Recebemos uma solicitação para redefinir a senha da sua conta. Se você não fez este pedido, pode ignorar este e-mail com segurança. Caso contrário, abra o link abaixo para escolher sua nova senha:",
     resetUrl,
     "",
     "Este link é válido por 1 hora.",
-  ]
-    .filter((linha, indice, linhas) => !(linha === "" && linhas[indice - 1] === ""))
-    .join("\n");
+  ].join("\n");
 }
