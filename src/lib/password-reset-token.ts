@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
+import { garantirSchemaMultiTenant } from "@/lib/multi-tenant";
 
 export type PasswordResetTokenRow = {
   id: string;
@@ -29,19 +30,26 @@ function mapearToken(row: {
   };
 }
 
+async function garantirTabelaTokens() {
+  await garantirSchemaMultiTenant();
+}
+
 export async function apagarTokensPorEmail(email: string) {
+  await garantirTabelaTokens();
   await getPrisma().$executeRaw`
     DELETE FROM "password_reset_tokens" WHERE email = ${email}
   `;
 }
 
 export async function apagarTokenPorValor(token: string) {
+  await garantirTabelaTokens();
   await getPrisma().$executeRaw`
     DELETE FROM "password_reset_tokens" WHERE token = ${token}
   `;
 }
 
 export async function apagarTokenPorId(id: string) {
+  await garantirTabelaTokens();
   await getPrisma().$executeRaw`
     DELETE FROM "password_reset_tokens" WHERE id = ${id}
   `;
@@ -52,6 +60,7 @@ export async function criarTokenRedefinicao(
   token: string,
   expires: Date,
 ) {
+  await garantirTabelaTokens();
   await getPrisma().$executeRaw`
     INSERT INTO "password_reset_tokens" ("id", "email", "token", "expires", "createdAt")
     VALUES (${crypto.randomUUID()}, ${email}, ${token}, ${expires}, NOW())
@@ -59,6 +68,7 @@ export async function criarTokenRedefinicao(
 }
 
 export async function buscarTokenRedefinicao(token: string) {
+  await garantirTabelaTokens();
   const rows = await getPrisma().$queryRaw<
     Array<{ id: string; email: string; token: string; expires: unknown }>
   >`

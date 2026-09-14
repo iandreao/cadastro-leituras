@@ -91,6 +91,29 @@ export async function garantirSchemaMultiTenant(db: ClienteSql = getPrisma()) {
   );
   await executarSePossivel(
     db,
+    `CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
+       "id" TEXT NOT NULL,
+       "email" TEXT NOT NULL,
+       "token" TEXT NOT NULL,
+       "expires" TIMESTAMP(3) NOT NULL,
+       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT "password_reset_tokens_pkey" PRIMARY KEY ("id")
+     )`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_tokens_token_key" ON "password_reset_tokens"("token")`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE INDEX IF NOT EXISTS "password_reset_tokens_email_idx" ON "password_reset_tokens"("email")`,
+  );
+  await executarSePossivel(
+    db,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_tokens_email_token_key" ON "password_reset_tokens"("email", "token")`,
+  );
+  await executarSePossivel(
+    db,
     `ALTER TABLE "Condominio" ADD COLUMN IF NOT EXISTS "gestorId" TEXT`,
   );
   await executarSePossivel(
