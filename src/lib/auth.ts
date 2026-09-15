@@ -1,5 +1,6 @@
 import { jwtVerify, SignJWT } from "jose";
 import { NextResponse } from "next/server";
+import { ehPrimeiroAcesso } from "@/lib/primeiro-acesso";
 
 export const SESSION_COOKIE = "sessao";
 
@@ -38,7 +39,7 @@ export async function createSessionToken(user: SessionUser) {
     email: user.email,
     role: user.role,
     gestorId: user.gestorId,
-    primeiroAcesso: user.primeiroAcesso,
+    primeiroAcesso: ehPrimeiroAcesso(user.primeiroAcesso),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.sub)
@@ -63,7 +64,7 @@ export async function verifySessionToken(
       email: payload.email,
       role: roleDaClaim(payload.role) ?? "OPERADOR",
       gestorId: typeof payload.gestorId === "string" ? payload.gestorId : null,
-      primeiroAcesso: payload.primeiroAcesso === true,
+      primeiroAcesso: ehPrimeiroAcesso(payload.primeiroAcesso),
     };
   } catch {
     return null;

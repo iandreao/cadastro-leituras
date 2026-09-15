@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { CondominioSelecionadoProvider } from "@/lib/condominio-selecionado";
-import { getSession } from "@/lib/session";
+import { exigirSessaoLiberada } from "@/lib/exigir-sessao-painel";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +9,7 @@ export default async function PainelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-
-  if (!session) {
-    redirect("/login");
-  }
+  const session = await exigirSessaoLiberada();
 
   return (
     <CondominioSelecionadoProvider>

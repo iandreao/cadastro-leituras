@@ -1,5 +1,6 @@
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
+import { ehPrimeiroAcesso } from "@/lib/primeiro-acesso";
 
 const SESSION_COOKIE = "sessao";
 
@@ -44,7 +45,7 @@ async function sessaoDoPedido(token?: string) {
     return {
       autenticado: true,
       role: typeof payload.role === "string" ? payload.role : null,
-      primeiroAcesso: payload.primeiroAcesso === true,
+      primeiroAcesso: ehPrimeiroAcesso(payload.primeiroAcesso),
     };
   } catch {
     return {
@@ -119,6 +120,19 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
+    "/condominios/:path*",
+    "/nova-senha/:path*",
+    "/admin/:path*",
+    "/unidades/:path*",
+    "/leituras/:path*",
+    "/despesas/:path*",
+    "/apuracao/:path*",
+    "/configuracoes/:path*",
+    "/api/:path*",
+    "/login",
+    "/esqueceu-senha/:path*",
+    "/redefinir-senha/:path*",
     "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico).*)",
   ],
 };

@@ -5,6 +5,7 @@ import {
   responderErroAuth,
 } from "@/lib/auth-api";
 import { applySessionCookie, createSessionToken } from "@/lib/auth";
+import { ehPrimeiroAcesso } from "@/lib/primeiro-acesso";
 import { senhaConfere } from "@/lib/senha";
 import { loginSchema } from "@/lib/validations";
 
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
       email: usuario.email,
       role: usuario.role ?? "OPERADOR",
       gestorId: usuario.gestorId ?? null,
-      primeiroAcesso: usuario.primeiroAcesso === true,
+      primeiroAcesso: ehPrimeiroAcesso(usuario.primeiroAcesso),
     });
 
     return applySessionCookie(
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
           email: usuario.email,
           role: usuario.role ?? "OPERADOR",
           gestorId: usuario.gestorId ?? null,
-          primeiroAcesso: usuario.primeiroAcesso === true,
+          primeiroAcesso: ehPrimeiroAcesso(usuario.primeiroAcesso),
         },
       }),
       token,
