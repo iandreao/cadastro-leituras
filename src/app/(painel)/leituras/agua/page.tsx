@@ -1,5 +1,5 @@
-import LeituraGradeScreen from "@/components/LeituraGradeScreen";
+import { redirect } from "next/navigation";
 
 export default function LeituraAguaPage() {
-  return <LeituraGradeScreen tipo="agua" />;
+  redirect("/leituras/gerenciar");
 }

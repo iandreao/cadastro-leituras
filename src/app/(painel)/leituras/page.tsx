@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function LeiturasPage() {
-  redirect("/leituras/agua");
+  redirect("/leituras/gerenciar");
 }

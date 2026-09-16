@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { nomeBloco } from "@/lib/blocos";
+import { usePublicarCompetencia } from "@/lib/competencia-selecionada";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { periodoBrasil } from "@/lib/periodo";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
@@ -108,16 +109,24 @@ function leituraAtualExistente(
 export default function LeituraGradeScreen({
   tipo,
   condominios: condominiosIniciais = [],
+  condominioIdInicial = "",
+  mesInicial,
+  anoInicial,
+  embutido = false,
 }: {
   tipo: TipoLeituraTela;
   condominios?: Condominio[];
+  condominioIdInicial?: string;
+  mesInicial?: number;
+  anoInicial?: number;
+  embutido?: boolean;
 }) {
   const condominios = useCondominiosResumo(condominiosIniciais);
   const titulo =
     tipo === "agua" ? "Inserir Leitura de Água" : "Inserir Leitura de Gás";
-  const [condominioId, setCondominioId] = useState("");
-  const [mes, setMes] = useState(String(agoraBrasil.mes));
-  const [ano, setAno] = useState(String(agoraBrasil.ano));
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
+  const [mes, setMes] = useState(String(mesInicial ?? agoraBrasil.mes));
+  const [ano, setAno] = useState(String(anoInicial ?? agoraBrasil.ano));
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [leituras, setLeituras] = useState<Leitura[]>([]);
   const [atuais, setAtuais] = useState<Record<string, string>>({});
@@ -128,6 +137,21 @@ export default function LeituraGradeScreen({
   const [salvando, setSalvando] = useState(false);
   const [movimentoFechado, setMovimentoFechado] = useState(false);
   usePublicarCondominio(condominioId, condominios);
+  usePublicarCompetencia(mes, ano);
+
+  useEffect(() => {
+    if (condominioIdInicial) {
+      setCondominioId(condominioIdInicial);
+    }
+
+    if (typeof mesInicial === "number") {
+      setMes(String(mesInicial));
+    }
+
+    if (typeof anoInicial === "number") {
+      setAno(String(anoInicial));
+    }
+  }, [anoInicial, condominioIdInicial, mesInicial]);
 
   const mesNumero = Number(mes);
   const anoNumero = Number(ano);
@@ -446,7 +470,11 @@ export default function LeituraGradeScreen({
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto h-auto min-h-fit max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm"
+      className={
+        embutido
+          ? "mx-auto h-full min-h-0 max-w-6xl overflow-auto rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm"
+          : "mx-auto h-auto min-h-fit max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm"
+      }
     >
       <h2 className="text-3xl font-medium text-slate-900">{titulo}</h2>
       <p className="mt-1 text-lg text-slate-600">

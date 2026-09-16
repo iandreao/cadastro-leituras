@@ -1,4 +1,5 @@
 import Sidebar from "@/components/Sidebar";
+import { CompetenciaSelecionadaProvider } from "@/lib/competencia-selecionada";
 import { CondominioSelecionadoProvider } from "@/lib/condominio-selecionado";
 import { exigirSessaoLiberada } from "@/lib/exigir-sessao-painel";
 
@@ -13,12 +14,14 @@ export default async function PainelLayout({
 
   return (
     <CondominioSelecionadoProvider>
-      <div className="min-h-screen lg:flex lg:h-screen">
-        <Sidebar nome={session.nome} role={session.role} />
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 lg:p-4">
-          {children}
-        </main>
-      </div>
+      <CompetenciaSelecionadaProvider>
+        <div className="min-h-screen lg:flex lg:h-screen">
+          <Sidebar nome={session.nome} role={session.role} />
+          <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-3 lg:p-4">
+            {children}
+          </main>
+        </div>
+      </CompetenciaSelecionadaProvider>
     </CondominioSelecionadoProvider>
   );
 }

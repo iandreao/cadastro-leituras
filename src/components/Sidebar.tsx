@@ -7,10 +7,8 @@ import { classeTagRole, rotuloRole } from "@/lib/roles-ui";
 
 const itens: { href: string; label: string; roles?: string[] }[] = [
   { href: "/condominios/gerenciar", label: "Incluir Condomínio" },
-  { href: "/configuracoes/tipos-despesas", label: "Incluir Tipos de Despesas" },
-  { href: "/despesas", label: "Incluir Despesas do Mês" },
-  { href: "/leituras/agua", label: "Inserir Leitura de Água" },
-  { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
+  { href: "/despesas/gerenciar", label: "Incluir Despesas" },
+  { href: "/leituras/gerenciar", label: "Incluir Leituras" },
   { href: "/apuracao", label: "Apurar Despesas do Mês" },
   {
     href: "/admin/movimentos",
@@ -87,15 +85,16 @@ export default function Sidebar({
           {itens
             .filter((item) => !item.roles || item.roles.includes(role))
             .map((item) => {
-            const ativo = pathname.startsWith(item.href) ||
-              (item.href === "/condominios/gerenciar" &&
-                pathname.startsWith("/condominios"));
+            const ativo =
+              pathname.startsWith(item.href) ||
+              (item.href.endsWith("/gerenciar") &&
+                pathname.startsWith(item.href.slice(0, -"/gerenciar".length)));
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                className={`rounded-lg px-3 py-2 text-base font-semibold transition ${
                   ativo
                     ? "bg-white/15 text-white"
                     : "text-teal-50/80 hover:bg-white/10 hover:text-white"
@@ -112,7 +111,7 @@ export default function Sidebar({
         <button
           type="button"
           onClick={sair}
-          className="w-full rounded-lg border border-white/15 px-3 py-1.5 text-sm font-medium text-teal-50 transition hover:bg-white/10"
+          className="w-full rounded-lg border border-white/15 px-3 py-2 text-base font-semibold text-teal-50 transition hover:bg-white/10"
         >
           Sair
         </button>

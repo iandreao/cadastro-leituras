@@ -12,6 +12,7 @@ import {
 } from "@/lib/despesas";
 import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
 import { MESES, anosReferencia, nomeMes } from "@/lib/leituras";
+import { usePublicarCompetencia } from "@/lib/competencia-selecionada";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 
 type Condominio = {
@@ -71,20 +72,28 @@ export default function DespesaScreen({
   tiposIniciais,
   blocosIniciais,
   despesasIniciais,
+  condominioIdInicial = "",
+  mesInicial,
+  anoInicial,
+  embutido = false,
 }: {
   condominiosIniciais: Condominio[];
   tiposIniciais: TipoDespesa[];
   blocosIniciais: BlocoCadastro[];
   despesasIniciais: DespesaMensal[];
+  condominioIdInicial?: string;
+  mesInicial?: number;
+  anoInicial?: number;
+  embutido?: boolean;
 }) {
   const condominios = useCondominiosResumo(condominiosIniciais);
   const [tipos, setTipos] = useState<TipoDespesa[]>(tiposIniciais);
   const [blocos, setBlocos] = useState(blocosIniciais);
   const [despesas, setDespesas] = useState<DespesaMensal[]>(despesasIniciais);
-  const [condominioId, setCondominioId] = useState("");
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
   const [blocoId, setBlocoId] = useState("");
-  const [mes, setMes] = useState<number | "">("");
-  const [ano, setAno] = useState<number | "">("");
+  const [mes, setMes] = useState<number | "">(mesInicial ?? "");
+  const [ano, setAno] = useState<number | "">(anoInicial ?? "");
   const [tipoDespesaId, setTipoDespesaId] = useState("");
   const [valorTotal, setValorTotal] = useState("");
   const [valorFixo, setValorFixo] = useState("");
@@ -98,6 +107,17 @@ export default function DespesaScreen({
     { mes: number; ano: number }[]
   >([]);
   usePublicarCondominio(condominioId, condominios);
+  usePublicarCompetencia(mes, ano);
+
+  useEffect(() => {
+    if (typeof mesInicial === "number") {
+      setMes(mesInicial);
+    }
+
+    if (typeof anoInicial === "number") {
+      setAno(anoInicial);
+    }
+  }, [anoInicial, mesInicial]);
 
   const periodoFormularioFechado =
     mes !== "" &&
@@ -243,6 +263,15 @@ export default function DespesaScreen({
     await carregar(id, undefined);
   }
 
+  useEffect(() => {
+    if (!condominioIdInicial) {
+      return;
+    }
+
+    void onCondominioChange(condominioIdInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominioIdInicial]);
+
   function cancelar() {
     setEditandoId(null);
     setValorTotal("");
@@ -384,7 +413,13 @@ export default function DespesaScreen({
   }
 
   return (
-    <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+    <div
+      className={
+        embutido
+          ? "flex h-full min-h-0 w-full flex-col gap-6 overflow-auto lg:flex-row lg:items-stretch"
+          : "flex w-full flex-col gap-6 lg:flex-row lg:items-start"
+      }
+    >
       <section className="flex w-full flex-col overflow-visible rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:w-1/3 lg:shrink-0">
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           Incluir Despesas do Mês
@@ -443,7 +478,7 @@ export default function DespesaScreen({
             </select>
             {condominioId && blocosDoCondominio.length === 0 ? (
               <span className="mt-1 block text-base text-slate-500">
-                Cadastre os blocos em Configurações → Blocos / Torres.
+                Cadastre os blocos na aba Blocos / Torres de Incluir Condomínio.
               </span>
             ) : null}
           </label>

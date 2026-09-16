@@ -1,5 +1,5 @@
-import LeituraGradeScreen from "@/components/LeituraGradeScreen";
+import { redirect } from "next/navigation";
 
 export default function LeituraGasPage() {
-  return <LeituraGradeScreen tipo="gas" />;
+  redirect("/leituras/gerenciar?aba=gas");
 }

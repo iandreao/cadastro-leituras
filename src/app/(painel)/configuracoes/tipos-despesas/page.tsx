@@ -1,5 +1,5 @@
-import TiposDespesaScreen from "./TiposDespesaScreen";
+import { redirect } from "next/navigation";
 
 export default function TiposDespesasPage() {
-  return <TiposDespesaScreen />;
+  redirect("/despesas/gerenciar");
 }

@@ -1,12 +1,5 @@
-import DespesaScreen from "./DespesaScreen";
+import { redirect } from "next/navigation";
 
 export default function DespesasPage() {
-  return (
-    <DespesaScreen
-      condominiosIniciais={[]}
-      tiposIniciais={[]}
-      blocosIniciais={[]}
-      despesasIniciais={[]}
-    />
-  );
+  redirect("/despesas/gerenciar?aba=mes");
 }

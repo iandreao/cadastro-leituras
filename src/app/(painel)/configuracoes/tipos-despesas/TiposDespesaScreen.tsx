@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { queryEscopoTipo } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
@@ -9,6 +9,7 @@ import {
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
+  GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 
 type Condominio = {
@@ -45,14 +46,18 @@ const campoClass =
 
 export default function TiposDespesaScreen({
   condominios: condominiosIniciais = [],
+  condominioIdInicial = "",
+  embutido = false,
 }: {
   condominios?: Condominio[];
+  condominioIdInicial?: string;
+  embutido?: boolean;
 }) {
   const condominios = useCondominiosResumo(condominiosIniciais);
   const [tipos, setTipos] = useState<TipoDespesa[]>([]);
   const [tiposUnidade, setTiposUnidade] = useState<TipoUnidade[]>([]);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
-  const [condominioId, setCondominioId] = useState("");
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
   const [blocoId, setBlocoId] = useState("");
   const [nome, setNome] = useState("");
   const [selecionados, setSelecionados] = useState<string[]>([]);
@@ -140,6 +145,15 @@ export default function TiposDespesaScreen({
     setInfo("");
     await carregar(condominioId, valor);
   }
+
+  useEffect(() => {
+    if (!condominioIdInicial) {
+      return;
+    }
+
+    void carregarBlocos(condominioIdInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominioIdInicial]);
 
   function cancelar() {
     setNome("");
@@ -246,7 +260,7 @@ export default function TiposDespesaScreen({
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={embutido ? GRADE_CADASTRO_EMBUTIDA : GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           {editandoId ? "Alterar tipo de despesa" : "Incluir Tipos de Despesas"}
