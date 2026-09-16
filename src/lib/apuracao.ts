@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/auth";
 import { escolherMoradorNaCompetencia } from "@/lib/historico-morador";
-import { limitesCompetencia } from "@/lib/periodo";
+import { limitesCompetencia, periodoAnterior } from "@/lib/periodo";
 import { movimentoEstaFechado } from "@/lib/movimento";
 import { escopoTenant } from "@/lib/multi-tenant";
 import {
@@ -101,13 +101,7 @@ type ValoresUnidade = {
 
 type CampoRateio = keyof ValoresUnidade;
 
-export function periodoAnterior(mes: number, ano: number) {
-  if (mes === 1) {
-    return { mes: 12, ano: ano - 1 };
-  }
-
-  return { mes: mes - 1, ano };
-}
+export { periodoAnterior };
 
 export function arredondarMoeda(valor: number) {
   return Math.round((valor + Number.EPSILON) * 100) / 100;
@@ -253,93 +247,107 @@ async function carregarPacoteApuracao(
 ) {
   const { fim } = limitesCompetencia(mes, ano);
 
-  return prisma.condominio.findFirst({
+  const condominio = await prisma.condominio.findFirst({
     where: { id: condominioId, ...escopoTenant(session) },
-    relationLoadStrategy: "join",
-    select: {
-      id: true,
-      despesasMensais: {
-        where: { mes, ano },
-        orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
-        select: {
-          blocoId: true,
-          valorTotal: true,
-          valorFixo: true,
-          valorVariavel: true,
-          formaCobranca: true,
-          tipoDespesaId: true,
-          tipoDespesa: {
-            select: { id: true, nome: true },
-          },
-          bloco: {
-            select: { nome: true },
-          },
-        },
-      },
-      tiposDespesa: {
-        select: {
-          regras: {
-            select: {
-              tipoUnidadeId: true,
-              tipoDespesaId: true,
-            },
-          },
-        },
-      },
-      unidades: {
-        orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
-        select: {
-          id: true,
-          numero: true,
-          blocoId: true,
-          tipoUnidadeId: true,
-          nomeMorador: true,
-          celular: true,
-          tipoUnidade: {
-            select: { id: true, nome: true },
-          },
-          bloco: {
-            select: { id: true, nome: true },
-          },
-          leituras: {
-            where: filtroLeiturasCompetencia(mes, ano),
-            select: {
-              mes: true,
-              ano: true,
-              valorAgua: true,
-              valorGas: true,
-            },
-          },
-          historicoMoradores: {
-            where: { dataEntrada: { lte: fim } },
-            orderBy: { dataEntrada: "asc" },
-            select: {
-              nomeMorador: true,
-              celular: true,
-              email: true,
-              dataEntrada: true,
-              dataSaida: true,
-            },
-          },
-          faturas: {
-            where: { mes, ano },
-            take: 1,
-            select: {
-              id: true,
-              unidadeId: true,
-              mes: true,
-              ano: true,
-              valorAgua: true,
-              valorEnergia: true,
-              valorGas: true,
-              valorOutras: true,
-              valorTotal: true,
-            },
-          },
-        },
-      },
-    },
+    select: { id: true },
   });
+
+  if (!condominio) {
+    return null;
+  }
+
+  const [despesasMensais, tiposDespesa, unidades] = await Promise.all([
+    prisma.despesaMensal.findMany({
+      where: { condominioId, mes, ano },
+      orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+      select: {
+        blocoId: true,
+        valorTotal: true,
+        valorFixo: true,
+        valorVariavel: true,
+        formaCobranca: true,
+        tipoDespesaId: true,
+        tipoDespesa: {
+          select: { id: true, nome: true },
+        },
+        bloco: {
+          select: { nome: true },
+        },
+      },
+    }),
+    prisma.tipoDespesa.findMany({
+      where: { condominioId },
+      select: {
+        regras: {
+          select: {
+            tipoUnidadeId: true,
+            tipoDespesaId: true,
+          },
+        },
+      },
+    }),
+    prisma.unidade.findMany({
+      where: { condominioId },
+      relationLoadStrategy: "query",
+      orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
+      select: {
+        id: true,
+        numero: true,
+        blocoId: true,
+        tipoUnidadeId: true,
+        nomeMorador: true,
+        celular: true,
+        tipoUnidade: {
+          select: { id: true, nome: true },
+        },
+        bloco: {
+          select: { id: true, nome: true },
+        },
+        leituras: {
+          where: filtroLeiturasCompetencia(mes, ano),
+          select: {
+            mes: true,
+            ano: true,
+            valorAgua: true,
+            valorGas: true,
+          },
+        },
+        historicoMoradores: {
+          where: { dataEntrada: { lte: fim } },
+          orderBy: { dataEntrada: "asc" },
+          select: {
+            nomeMorador: true,
+            celular: true,
+            email: true,
+            dataEntrada: true,
+            dataSaida: true,
+          },
+        },
+        faturas: {
+          where: { mes, ano },
+          take: 1,
+          select: {
+            id: true,
+            unidadeId: true,
+            mes: true,
+            ano: true,
+            valorAgua: true,
+            valorEnergia: true,
+            valorGas: true,
+            valorOutras: true,
+            valorTotal: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    id: condominio.id,
+    despesasMensais,
+    tiposDespesa,
+    unidades,
+  };
 }
 
 type PacoteApuracao = NonNullable<Awaited<ReturnType<typeof carregarPacoteApuracao>>>;
@@ -589,21 +597,22 @@ export async function processarApuracao(
   },
 ) {
   const persistir = opcoes?.persistir !== false;
+  const [fechado, condominio] = await Promise.all([
+    opcoes?.recusarSeFechado
+      ? movimentoEstaFechado(condominioId, mes, ano, opcoes?.session)
+      : Promise.resolve(false),
+    opcoes?.pacote
+      ? Promise.resolve(opcoes.pacote)
+      : carregarPacoteApuracao(condominioId, mes, ano, opcoes?.session),
+  ]);
 
-  if (
-    opcoes?.recusarSeFechado &&
-    (await movimentoEstaFechado(condominioId, mes, ano, opcoes?.session))
-  ) {
+  if (fechado) {
     return {
       error:
         "O movimento deste mês está fechado. Reabra o movimento para recalcular a apuração.",
       status: 409 as const,
     };
   }
-
-  const condominio =
-    opcoes?.pacote ??
-    (await carregarPacoteApuracao(condominioId, mes, ano, opcoes?.session));
 
   if (!condominio) {
     return { error: "Condomínio não encontrado.", status: 404 as const };
@@ -906,7 +915,10 @@ export async function carregarApuracaoPeriodo(
   ano: number,
   session?: SessionUser | null,
 ) {
-  const pacote = await carregarPacoteApuracao(condominioId, mes, ano, session);
+  const [pacote, fechado] = await Promise.all([
+    carregarPacoteApuracao(condominioId, mes, ano, session),
+    movimentoEstaFechado(condominioId, mes, ano, session),
+  ]);
 
   if (!pacote) {
     return {
@@ -918,8 +930,6 @@ export async function carregarApuracaoPeriodo(
       status: 404 as const,
     };
   }
-
-  const fechado = await movimentoEstaFechado(condominioId, mes, ano, session);
 
   if (fechado) {
     const faturas = montarFaturasSalvasDoPacote(pacote, mes, ano);

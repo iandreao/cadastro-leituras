@@ -10,6 +10,7 @@ import {
   escopoTenant,
   omitirDadosGestor,
   resolverGestorIdDeCadastro,
+  viaCondominio,
 } from "@/lib/multi-tenant";
 
 export async function GET(request: Request) {
@@ -31,24 +32,35 @@ export async function GET(request: Request) {
     return NextResponse.json(condominios);
   }
 
-  const condominios = await prisma.condominio.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    include: {
-      unidades: {
-        select: {
-          _count: {
-            select: { leituras: true },
-          },
-        },
+  const [condominios, unidadesComLeitura] = await Promise.all([
+    prisma.condominio.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      ...(ehSuperAdmin(session)
+        ? {
+            include: {
+              gestor: { select: { id: true, nome: true } },
+            },
+          }
+        : {}),
+    }),
+    prisma.unidade.findMany({
+      where: {
+        ...viaCondominio(session),
+        leituras: { some: {} },
       },
-    },
-  });
+      distinct: ["condominioId"],
+      select: { condominioId: true },
+    }),
+  ]);
+  const comLeitura = new Set(
+    unidadesComLeitura.map((item) => item.condominioId),
+  );
 
   return NextResponse.json(
-    condominios.map(({ unidades, ...condominio }) => ({
+    condominios.map((condominio) => ({
       ...omitirDadosGestor(condominio, session),
-      temLeitura: unidades.some((unidade) => unidade._count.leituras > 0),
+      temLeitura: comLeitura.has(condominio.id),
     })),
   );
 }

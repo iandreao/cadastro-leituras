@@ -5,8 +5,6 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
-/** Singleton: reutiliza a conexão Neon entre hot-reloads e invocações. */
-
 function criarPrismaClient() {
   const url = process.env.DATABASE_URL
     ? urlNeonComPoolerESsl(normalizarDatabaseUrl(process.env.DATABASE_URL))
@@ -23,6 +21,7 @@ function criarPrismaClient() {
   });
 }
 
+/** Singleton global: reutiliza o cliente entre invocações serverless na Vercel. */
 export function getPrisma() {
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = criarPrismaClient();

@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession, type SessionUser } from "@/lib/auth";
-import {
-  buscarUltimaLeituraAnterior,
-  validarLeituraUnidade,
-} from "@/lib/leitura-regras";
+import { validarLeituraUnidade } from "@/lib/leitura-regras";
 import { leituraLoteSchema, leituraSchema } from "@/lib/validations";
 import {
   consumoGasInconsistente,
@@ -19,6 +16,7 @@ import {
   respostaSePeriodoUnidadeFechado,
 } from "@/lib/movimento";
 import { buscarCondominioDoTenant, viaCondominio } from "@/lib/multi-tenant";
+import { periodoAnterior } from "@/lib/periodo";
 
 const includeUnidade = {
   unidade: {
@@ -52,6 +50,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const condominioId = searchParams.get("condominioId");
   const unidadeId = searchParams.get("unidadeId");
+  const mes = Number(searchParams.get("mes"));
+  const ano = Number(searchParams.get("ano"));
+  const periodoValido =
+    Number.isInteger(mes) &&
+    mes >= 1 &&
+    mes <= 12 &&
+    Number.isInteger(ano) &&
+    ano >= 2000;
+  const anterior = periodoValido ? periodoAnterior(mes, ano) : null;
 
   const leituras = await prisma.leitura.findMany({
     where: {
@@ -60,8 +67,16 @@ export async function GET(request: Request) {
         ...(condominioId ? { condominioId } : {}),
         ...viaCondominio(session),
       },
+      ...(anterior
+        ? {
+            OR: [
+              { mes, ano },
+              { mes: anterior.mes, ano: anterior.ano },
+            ],
+          }
+        : {}),
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ ano: "desc" }, { mes: "desc" }],
     select: {
       unidadeId: true,
       mes: true,
@@ -187,7 +202,10 @@ async function salvarLote(body: unknown, session: SessionUser) {
 
   const unidades = await prisma.unidade.findMany({
     where: { condominioId, ...viaCondominio(session) },
-    include: {
+    select: {
+      id: true,
+      numero: true,
+      tipoConsumo: true,
       tipoUnidade: {
         select: { nome: true },
       },
@@ -197,6 +215,35 @@ async function salvarLote(body: unknown, session: SessionUser) {
     },
   });
   const porId = new Map(unidades.map((unidade) => [unidade.id, unidade]));
+  const unidadeIds = itens.map((item) => item.unidadeId);
+
+  const [existentes, anteriores] = await Promise.all([
+    prisma.leitura.findMany({
+      where: {
+        unidadeId: { in: unidadeIds },
+        mes,
+        ano,
+      },
+    }),
+    prisma.leitura.findMany({
+      where: {
+        unidadeId: { in: unidadeIds },
+        OR: [
+          { ano: { lt: ano } },
+          { AND: [{ ano }, { mes: { lt: mes } }] },
+        ],
+      },
+      orderBy: [{ ano: "desc" }, { mes: "desc" }],
+      select: {
+        unidadeId: true,
+        valorAgua: true,
+        valorGas: true,
+      },
+    }),
+  ]);
+  const existentePorUnidade = new Map(
+    existentes.map((item) => [item.unidadeId, item]),
+  );
 
   for (const item of itens) {
     const unidade = porId.get(item.unidadeId);
@@ -224,16 +271,17 @@ async function salvarLote(body: unknown, session: SessionUser) {
       );
     }
 
-    const anterior = await buscarUltimaLeituraAnterior({
-      unidadeId: item.unidadeId,
-      mes,
-      ano,
-      tipo,
+    const anterior = anteriores.find((leitura) => {
+      if (leitura.unidadeId !== item.unidadeId) {
+        return false;
+      }
+
+      return tipo === "agua"
+        ? leitura.valorAgua != null
+        : leitura.valorGas != null;
     });
     const valorAnterior =
-      tipo === "agua"
-        ? (anterior?.valorAgua ?? 0)
-        : (anterior?.valorGas ?? 0);
+      tipo === "agua" ? (anterior?.valorAgua ?? 0) : (anterior?.valorGas ?? 0);
 
     if (item.valor < valorAnterior) {
       return NextResponse.json(
@@ -265,37 +313,37 @@ async function salvarLote(body: unknown, session: SessionUser) {
     }
   }
 
+  const criar = [];
+  const atualizar = [];
+
   for (const item of itens) {
-    const existente = await prisma.leitura.findUnique({
-      where: {
-        unidadeId_mes_ano: {
-          unidadeId: item.unidadeId,
-          mes,
-          ano,
-        },
-      },
-    });
+    const existente = existentePorUnidade.get(item.unidadeId);
 
     if (existente) {
-      await prisma.leitura.update({
-        where: { id: existente.id },
-        data:
-          tipo === "agua"
-            ? { valorAgua: item.valor }
-            : { valorGas: item.valor },
-      });
+      atualizar.push(
+        prisma.leitura.update({
+          where: { id: existente.id },
+          data:
+            tipo === "agua"
+              ? { valorAgua: item.valor }
+              : { valorGas: item.valor },
+        }),
+      );
     } else {
-      await prisma.leitura.create({
-        data: {
-          unidadeId: item.unidadeId,
-          mes,
-          ano,
-          valorAgua: tipo === "agua" ? item.valor : null,
-          valorGas: tipo === "gas" ? item.valor : null,
-        },
+      criar.push({
+        unidadeId: item.unidadeId,
+        mes,
+        ano,
+        valorAgua: tipo === "agua" ? item.valor : null,
+        valorGas: tipo === "gas" ? item.valor : null,
       });
     }
   }
+
+  await prisma.$transaction([
+    ...atualizar,
+    ...(criar.length > 0 ? [prisma.leitura.createMany({ data: criar })] : []),
+  ]);
 
   return NextResponse.json({ ok: true, salvas: itens.length }, { status: 201 });
 }

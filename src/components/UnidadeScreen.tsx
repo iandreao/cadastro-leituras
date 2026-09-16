@@ -137,21 +137,38 @@ export default function UnidadeScreen({
   }
 
   useEffect(() => {
-    void carregar();
+    void carregarCondominios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function carregar() {
-    const [resCondominios, resUnidades] = await Promise.all([
-      fetch("/api/condominios?resumo=1"),
-      fetch("/api/unidades"),
-    ]);
+  useEffect(() => {
+    void carregarUnidades(condominioId);
+    void carregarBlocos(condominioId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominioId]);
 
+  async function carregarCondominios() {
+    const resCondominios = await fetch("/api/condominios?resumo=1");
     const listaCondominios = (await resCondominios.json()) as Condominio[];
-    const listaUnidades = (await resUnidades.json()) as Unidade[];
+    setCondominios(Array.isArray(listaCondominios) ? listaCondominios : []);
+  }
 
-    setCondominios(listaCondominios);
-    setUnidades(listaUnidades);
+  async function carregarUnidades(id: string) {
+    if (!id) {
+      setUnidades([]);
+      return;
+    }
+
+    const resUnidades = await fetch(`/api/unidades?condominioId=${id}`);
+    const listaUnidades = (await resUnidades.json()) as Unidade[];
+    setUnidades(Array.isArray(listaUnidades) ? listaUnidades : []);
+  }
+
+  async function carregar() {
+    await Promise.all([
+      carregarCondominios(),
+      carregarUnidades(condominioId),
+    ]);
     await carregarTipos(condominioId, undefined, blocoId);
     if (condominioId) {
       await carregarBlocos(condominioId);
@@ -279,47 +296,30 @@ export default function UnidadeScreen({
           return;
         }
 
-        const criadas: Unidade[] = [];
-        let ignoradas = 0;
+        const response = await fetch("/api/unidades", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            numeros: numerosLote,
+            tipoUnidadeId,
+            tipoConsumo,
+            blocoId,
+            condominioId,
+          }),
+        });
+        const data = (await response.json()) as {
+          criadas?: Unidade[];
+          ignoradas?: number;
+          error?: string;
+        };
 
-        for (const numeroLote of numerosLote) {
-          const response = await fetch("/api/unidades", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              numero: numeroLote,
-              nomeMorador: "",
-              celular: "",
-              tipoUnidadeId,
-              tipoConsumo,
-              blocoId,
-              condominioId,
-            }),
-          });
-          const data = (await response.json()) as Unidade & { error?: string };
-
-          if (response.status === 409) {
-            ignoradas += 1;
-            continue;
-          }
-
-          if (!response.ok) {
-            setErro(
-              data.error ??
-                `Não foi possível incluir a unidade ${numeroLote}.`,
-            );
-            if (criadas.length > 0) {
-              setUnidades((atual) => {
-                const ids = new Set(criadas.map((item) => item.id));
-                return [...criadas, ...atual.filter((item) => !ids.has(item.id))];
-              });
-              await carregar();
-            }
-            return;
-          }
-
-          criadas.push(data);
+        if (!response.ok) {
+          setErro(data.error ?? "Não foi possível gerar o lote.");
+          return;
         }
+
+        const criadas = data.criadas ?? [];
+        const ignoradas = data.ignoradas ?? 0;
 
         if (criadas.length === 0) {
           setErro(
@@ -342,7 +342,7 @@ export default function UnidadeScreen({
         setUnidadeInicial("");
         setUnidadesPorAndar("");
         setQuantidadeAndares("");
-        await carregar();
+        await carregarUnidades(condominioId);
         return;
       }
 

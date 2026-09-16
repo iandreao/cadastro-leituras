@@ -152,7 +152,9 @@ export default function LeituraGradeScreen({
       try {
         const [resUnidades, resLeituras, resMovimento] = await Promise.all([
           fetch(`/api/unidades?condominioId=${condominioId}&grade=1`),
-          fetch(`/api/leituras?condominioId=${condominioId}`),
+          fetch(
+            `/api/leituras?condominioId=${condominioId}&mes=${mesNumero}&ano=${anoNumero}`,
+          ),
           fetch(
             `/api/movimento?condominioId=${condominioId}&mes=${mesNumero}&ano=${anoNumero}`,
           ),
@@ -430,7 +432,9 @@ export default function LeituraGradeScreen({
 
       setInfo(`${itens.length} leitura(s) salvas com sucesso.`);
       setErrosLinha({});
-      const resLeituras = await fetch(`/api/leituras?condominioId=${condominioId}`);
+      const resLeituras = await fetch(
+        `/api/leituras?condominioId=${condominioId}&mes=${mesNumero}&ano=${anoNumero}`,
+      );
       setLeituras((await resLeituras.json()) as Leitura[]);
     } catch {
       setErro("Falha de conexão. Tente novamente.");

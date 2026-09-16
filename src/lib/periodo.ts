@@ -16,6 +16,14 @@ export function inteiroPeriodo(valor: unknown) {
   return Number.isInteger(numero) ? numero : Number.NaN;
 }
 
+export function periodoAnterior(mes: number, ano: number) {
+  if (mes === 1) {
+    return { mes: 12, ano: ano - 1 };
+  }
+
+  return { mes: mes - 1, ano };
+}
+
 export function mesmoPeriodo(
   mesA: unknown,
   anoA: unknown,

@@ -240,30 +240,44 @@ async function criarLote(body: unknown, session: SessionUser) {
   }
 
   const numeros = [...new Set(parsed.data.numeros)];
-
-  await prisma.unidade.createMany({
-    data: numeros.map((numero) => ({
-      numero,
-      nomeMorador: "",
-      celular: "",
-      tipoUnidadeId: parsed.data.tipoUnidadeId,
-      tipoConsumo: parsed.data.tipoConsumo,
-      blocoId,
+  const existentes = await prisma.unidade.findMany({
+    where: {
       condominioId: parsed.data.condominioId,
-    })),
-    skipDuplicates: true,
+      blocoId,
+      numero: { in: numeros },
+    },
+    select: { numero: true },
   });
+  const jaCadastrados = new Set(existentes.map((item) => item.numero));
+  const novos = numeros.filter((numero) => !jaCadastrados.has(numero));
+
+  if (novos.length > 0) {
+    await prisma.unidade.createMany({
+      data: novos.map((numero) => ({
+        numero,
+        nomeMorador: "",
+        celular: "",
+        tipoUnidadeId: parsed.data.tipoUnidadeId,
+        tipoConsumo: parsed.data.tipoConsumo,
+        blocoId,
+        condominioId: parsed.data.condominioId,
+      })),
+    });
+  }
 
   const criadas = await prisma.unidade.findMany({
     where: {
       condominioId: parsed.data.condominioId,
       blocoId,
-      numero: { in: numeros },
+      numero: { in: novos },
     },
     include: includeUnidade,
     orderBy: { numero: "asc" },
   });
 
   invalidarCacheCadastro();
-  return NextResponse.json({ criadas }, { status: 201 });
+  return NextResponse.json(
+    { criadas, ignoradas: jaCadastrados.size },
+    { status: 201 },
+  );
 }

@@ -116,6 +116,7 @@ model TipoUnidade {
   @@unique([nome, condominioId, blocoId])
   @@index([condominioId])
   @@index([blocoId])
+  @@index([condominioId, blocoId])
 }
 
 model Unidade {
@@ -139,6 +140,7 @@ model Unidade {
   @@unique([condominioId, blocoId, numero])
   @@index([condominioId])
   @@index([blocoId])
+  @@index([tipoUnidadeId])
 }
 
 model HistoricoMorador {
@@ -167,6 +169,7 @@ model Leitura {
   updatedAt DateTime @updatedAt
 
   @@unique([unidadeId, mes, ano])
+  @@index([mes, ano])
 }
 
 model TipoDespesa {
@@ -182,6 +185,7 @@ model TipoDespesa {
   @@unique([nome, condominioId, blocoId])
   @@index([condominioId])
   @@index([blocoId])
+  @@index([condominioId, blocoId])
 }
 
 model DespesaMensal {
@@ -204,6 +208,8 @@ model DespesaMensal {
   @@unique([condominioId, blocoId, mes, ano, tipoDespesaId])
   @@index([condominioId])
   @@index([blocoId])
+  @@index([condominioId, mes, ano])
+  @@index([tipoDespesaId])
 }
 
 model MovimentoMensal {
@@ -222,6 +228,7 @@ model MovimentoMensal {
   @@unique([mes, ano, gestorId])
   @@index([condominioId])
   @@index([gestorId])
+  @@index([gestorId, mes, ano])
 }
 
 model FaturaUnidade {
@@ -239,6 +246,7 @@ model FaturaUnidade {
   updatedAt    DateTime @updatedAt
 
   @@unique([unidadeId, mes, ano])
+  @@index([mes, ano])
 }
 
 model RegraParticipacao {
@@ -249,4 +257,5 @@ model RegraParticipacao {
   tipoDespesa   TipoDespesa @relation(fields: [tipoDespesaId], references: [id], onDelete: Cascade)
 
   @@unique([tipoUnidadeId, tipoDespesaId])
+  @@index([tipoDespesaId])
 }
