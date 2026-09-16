@@ -123,24 +123,46 @@ export async function DELETE(request: Request, context: RouteContext) {
     );
   }
 
-  const emUso =
-    bloco._count.unidades +
-      bloco._count.tiposUnidade +
-      bloco._count.tiposDespesa +
-      bloco._count.despesasMensais >
-    0;
+  const temLancamentos =
+    bloco._count.unidades + bloco._count.despesasMensais > 0;
 
-  if (emUso) {
+  if (temLancamentos) {
     return NextResponse.json(
       {
         error:
-          "Não é possível excluir: há unidades, tipos ou despesas vinculadas a este bloco.",
+          "Não é possível excluir: há unidades ou despesas vinculadas a este bloco.",
       },
       { status: 409 },
     );
   }
 
-  await prisma.bloco.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    const tiposUnidade = await tx.tipoUnidade.findMany({
+      where: { blocoId: bloco.id },
+      select: { id: true },
+    });
+    const tiposDespesa = await tx.tipoDespesa.findMany({
+      where: { blocoId: bloco.id },
+      select: { id: true },
+    });
+    const tipoUnidadeIds = tiposUnidade.map((item) => item.id);
+    const tipoDespesaIds = tiposDespesa.map((item) => item.id);
+
+    if (tipoUnidadeIds.length > 0 || tipoDespesaIds.length > 0) {
+      await tx.regraParticipacao.deleteMany({
+        where: {
+          OR: [
+            { tipoUnidadeId: { in: tipoUnidadeIds } },
+            { tipoDespesaId: { in: tipoDespesaIds } },
+          ],
+        },
+      });
+    }
+
+    await tx.tipoUnidade.deleteMany({ where: { blocoId: bloco.id } });
+    await tx.tipoDespesa.deleteMany({ where: { blocoId: bloco.id } });
+    await tx.bloco.delete({ where: { id: bloco.id } });
+  });
 
   invalidarCacheCadastro();
   return NextResponse.json({ ok: true });
