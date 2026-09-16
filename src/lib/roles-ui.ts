@@ -2,8 +2,8 @@ import type { RoleSessao } from "@/lib/auth";
 
 export const ROTULO_ROLE: Record<RoleSessao, string> = {
   SUPER_ADMIN: "Super Admin",
-  GESTOR_ADMIN: "Gestor",
-  OPERADOR: "Operador",
+  GESTOR_ADMIN: "Gestor Adm",
+  OPERADOR: "Usuário",
 };
 
 export const CLASSE_TAG_ROLE: Record<RoleSessao, string> = {

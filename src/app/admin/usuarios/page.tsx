@@ -40,7 +40,7 @@ function formularioVazio() {
 }
 
 function rotuloRole(role: "GESTOR_ADMIN" | "OPERADOR") {
-  return role === "GESTOR_ADMIN" ? "Gestor" : "Operador";
+  return role === "GESTOR_ADMIN" ? "Gestor Adm" : "Usuário";
 }
 
 function formatarData(valor: Date | string) {
@@ -242,8 +242,8 @@ export default function UsuariosPage() {
               }
               className={CAMPO}
             >
-              <option value="OPERADOR">Operador</option>
-              <option value="GESTOR_ADMIN">Gestor</option>
+              <option value="OPERADOR">Usuário</option>
+              <option value="GESTOR_ADMIN">Gestor Adm</option>
             </select>
           </label>
           <label className="block">

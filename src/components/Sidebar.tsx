@@ -16,13 +16,13 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
   { href: "/leituras/gas", label: "Inserir Leitura de Gás" },
   { href: "/apuracao", label: "Apurar Despesas do Mês" },
   {
-    href: "/admin/usuarios",
-    label: "Operadores / Usuários",
+    href: "/admin/movimentos",
+    label: "Fechamento de Mês",
     roles: ["SUPER_ADMIN", "GESTOR_ADMIN"],
   },
   {
-    href: "/admin/movimentos",
-    label: "Fechamento de Mês",
+    href: "/admin/usuarios",
+    label: "Incluir Usuários",
     roles: ["SUPER_ADMIN", "GESTOR_ADMIN"],
   },
   {
