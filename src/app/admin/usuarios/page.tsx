@@ -265,7 +265,7 @@ export default function UsuariosPage() {
           </label>
           {ehSuperAdmin ? (
             <label className="block">
-              <span className={ROTULO}>Gestor / Cliente</span>
+              <span className={ROTULO}>Cliente Gestor</span>
               <select
                 name="gestorId"
                 required
