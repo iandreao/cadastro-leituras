@@ -8,6 +8,7 @@ import {
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
+  GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
 import {
@@ -57,10 +58,12 @@ export default function CondominioScreen({
   inicial,
   role = "OPERADOR",
   gestorIdSessao = "",
+  embutido = false,
 }: {
   inicial: Condominio[];
   role?: RoleSessao;
   gestorIdSessao?: string | null;
+  embutido?: boolean;
 }) {
   const { publicar } = useCondominioSelecionado();
   const podeEscolherGestor = role === "SUPER_ADMIN";
@@ -319,7 +322,7 @@ export default function CondominioScreen({
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={embutido ? GRADE_CADASTRO_EMBUTIDA : GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">{titulo}</h2>
 
@@ -571,7 +574,7 @@ export default function CondominioScreen({
                           onClick={() => alterar(item)}
                           className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
                         >
-                          Alterar
+                          Editar
                         </button>
                         <button
                           type="button"

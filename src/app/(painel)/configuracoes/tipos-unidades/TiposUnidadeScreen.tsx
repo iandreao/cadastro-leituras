@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { queryEscopoTipo } from "@/lib/blocos";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
@@ -9,6 +9,7 @@ import {
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
+  GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 
 type Condominio = {
@@ -36,13 +37,17 @@ const campoClass =
 
 export default function TiposUnidadeScreen({
   condominios: condominiosIniciais = [],
+  condominioIdInicial = "",
+  embutido = false,
 }: {
   condominios?: Condominio[];
+  condominioIdInicial?: string;
+  embutido?: boolean;
 }) {
   const condominios = useCondominiosResumo(condominiosIniciais);
   const [tipos, setTipos] = useState<TipoUnidade[]>([]);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
-  const [condominioId, setCondominioId] = useState("");
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
   const [blocoId, setBlocoId] = useState("");
   const [nome, setNome] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -117,6 +122,15 @@ export default function TiposUnidadeScreen({
     setInfo("");
     await carregar(condominioId, valor);
   }
+
+  useEffect(() => {
+    if (!condominioIdInicial) {
+      return;
+    }
+
+    void carregarBlocos(condominioIdInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominioIdInicial]);
 
   function cancelar() {
     setNome("");
@@ -207,7 +221,7 @@ export default function TiposUnidadeScreen({
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={embutido ? GRADE_CADASTRO_EMBUTIDA : GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           {editandoId ? "Alterar tipo de unidade" : "Incluir Tipo de Unidades"}
@@ -369,7 +383,7 @@ export default function TiposUnidadeScreen({
                           onClick={() => alterar(item)}
                           className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
                         >
-                          Alterar
+                          Editar
                         </button>
                         <button
                           type="button"

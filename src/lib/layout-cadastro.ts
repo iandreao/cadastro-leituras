@@ -1,6 +1,9 @@
 export const GRADE_CADASTRO =
   "grid w-full grid-cols-1 gap-6 lg:h-[calc(100vh-2rem)] lg:grid-cols-12 lg:items-stretch lg:overflow-hidden";
 
+export const GRADE_CADASTRO_EMBUTIDA =
+  "grid h-full min-h-0 w-full grid-cols-1 gap-6 lg:grid-cols-12 lg:items-stretch lg:overflow-hidden";
+
 export const CARTAO_FORMULARIO =
   "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm lg:col-span-4 lg:h-full";
 

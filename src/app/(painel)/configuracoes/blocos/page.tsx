@@ -1,5 +1,5 @@
-import BlocosScreen from "./BlocosScreen";
+import { redirect } from "next/navigation";
 
 export default function BlocosPage() {
-  return <BlocosScreen />;
+  redirect("/condominios/gerenciar?aba=blocos");
 }

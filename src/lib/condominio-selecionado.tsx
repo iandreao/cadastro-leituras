@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 
 const STORAGE_KEY = "condominio-selecionado";
 
@@ -59,31 +58,17 @@ export function CondominioSelecionadoProvider({
 }: {
   children: ReactNode;
 }) {
-  const pathname = usePathname();
   const [selecionado, setSelecionado] = useState<Selecao | null>(null);
-  const [rota, setRota] = useState(pathname);
   const restaurouStorage = useRef(false);
 
-  if (pathname !== rota) {
-    setRota(pathname);
-    if (pathname.startsWith("/condominios")) {
-      setSelecionado(null);
-    }
-  }
-
   useEffect(() => {
-    if (pathname.startsWith("/condominios")) {
-      gravarStorage(null);
-      return;
-    }
-
     if (restaurouStorage.current) {
       return;
     }
 
     restaurouStorage.current = true;
     setSelecionado(lerStorage());
-  }, [pathname]);
+  }, []);
 
   const publicar = useCallback((selecao: Selecao | null) => {
     setSelecionado(selecao);

@@ -8,6 +8,7 @@ import {
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
+  GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 
 type Condominio = {
@@ -32,12 +33,16 @@ const campoClass =
 
 export default function BlocosScreen({
   condominios: condominiosIniciais = [],
+  condominioIdInicial = "",
+  embutido = false,
 }: {
   condominios?: Condominio[];
+  condominioIdInicial?: string;
+  embutido?: boolean;
 }) {
   const condominios = useCondominiosResumo(condominiosIniciais);
   const [blocos, setBlocos] = useState<Bloco[]>([]);
-  const [condominioId, setCondominioId] = useState("");
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
   const [nome, setNome] = useState("");
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
@@ -177,7 +182,7 @@ export default function BlocosScreen({
   );
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={embutido ? GRADE_CADASTRO_EMBUTIDA : GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           {editandoId ? "Alterar bloco/torre" : "Incluir Blocos / Torres"}
@@ -304,7 +309,7 @@ export default function BlocosScreen({
                           onClick={() => alterar(item)}
                           className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
                         >
-                          Alterar
+                          Editar
                         </button>
                         <button
                           type="button"

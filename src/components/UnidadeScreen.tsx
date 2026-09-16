@@ -8,6 +8,7 @@ import {
   CARTAO_FORMULARIO,
   CARTAO_LISTA,
   GRADE_CADASTRO,
+  GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 import { maskCelular, toTitleCase } from "@/lib/masks";
 import {
@@ -66,16 +67,20 @@ export default function UnidadeScreen({
   condominiosIniciais,
   unidadesIniciais,
   tiposIniciais,
+  condominioIdInicial = "",
+  embutido = false,
 }: {
   condominiosIniciais: Condominio[];
   unidadesIniciais: Unidade[];
   tiposIniciais: TipoUnidadeCadastro[];
+  condominioIdInicial?: string;
+  embutido?: boolean;
 }) {
   const [condominios, setCondominios] = useState<Condominio[]>(condominiosIniciais);
   const [unidades, setUnidades] = useState<Unidade[]>(unidadesIniciais);
   const [tipos, setTipos] = useState<TipoUnidadeCadastro[]>(tiposIniciais);
   const [blocos, setBlocos] = useState<BlocoCadastro[]>([]);
-  const [condominioId, setCondominioId] = useState("");
+  const [condominioId, setCondominioId] = useState(condominioIdInicial);
   const [blocoId, setBlocoId] = useState("");
   const [tipoUnidadeId, setTipoUnidadeId] = useState(tiposIniciais[0]?.id ?? "");
   const [tipoConsumo, setTipoConsumo] = useState<TipoConsumo>("Água/Gás");
@@ -377,7 +382,7 @@ export default function UnidadeScreen({
   }
 
   return (
-    <div className={GRADE_CADASTRO}>
+    <div className={embutido ? GRADE_CADASTRO_EMBUTIDA : GRADE_CADASTRO}>
       <section className={CARTAO_FORMULARIO}>
         <h2 className="shrink-0 text-3xl font-medium text-slate-900">
           {editandoId ? "Alterar unidade" : "Incluir unidade"}
@@ -442,7 +447,7 @@ export default function UnidadeScreen({
             </select>
             {condominioId && blocos.length === 0 ? (
               <span className="mt-1 block text-base text-slate-500">
-                Cadastre os blocos em Configurações → Blocos / Torres.
+                Cadastre os blocos na aba Blocos / Torres.
               </span>
             ) : null}
           </label>
@@ -466,7 +471,7 @@ export default function UnidadeScreen({
             </select>
             {tipos.length === 0 ? (
               <span className="mt-1 block text-base text-slate-500">
-                Cadastre os tipos em Configurações → Tipos de Unidade.
+                Cadastre os tipos na aba Tipos de Unidade.
               </span>
             ) : null}
           </label>
@@ -723,7 +728,7 @@ export default function UnidadeScreen({
                           onClick={() => alterar(item)}
                           className="rounded-md bg-sky-400 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-white hover:bg-sky-500"
                         >
-                          Alterar
+                          Editar
                         </button>
                         <button
                           type="button"

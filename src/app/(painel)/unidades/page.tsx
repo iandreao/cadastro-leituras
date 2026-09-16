@@ -1,11 +1,5 @@
-import UnidadeScreen from "@/components/UnidadeScreen";
+import { redirect } from "next/navigation";
 
 export default function UnidadesPage() {
-  return (
-    <UnidadeScreen
-      condominiosIniciais={[]}
-      unidadesIniciais={[]}
-      tiposIniciais={[]}
-    />
-  );
+  redirect("/condominios/gerenciar?aba=unidades");
 }

@@ -6,10 +6,7 @@ import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
 import { classeTagRole, rotuloRole } from "@/lib/roles-ui";
 
 const itens: { href: string; label: string; roles?: string[] }[] = [
-  { href: "/condominios", label: "Incluir Condomínio" },
-  { href: "/configuracoes/blocos", label: "Incluir Blocos / Torres" },
-  { href: "/configuracoes/tipos-unidades", label: "Incluir Tipos de Unidade" },
-  { href: "/unidades", label: "Incluir Unidade" },
+  { href: "/condominios/gerenciar", label: "Incluir Condomínio" },
   { href: "/configuracoes/tipos-despesas", label: "Incluir Tipos de Despesas" },
   { href: "/despesas", label: "Incluir Despesas do Mês" },
   { href: "/leituras/agua", label: "Inserir Leitura de Água" },
@@ -90,7 +87,9 @@ export default function Sidebar({
           {itens
             .filter((item) => !item.roles || item.roles.includes(role))
             .map((item) => {
-            const ativo = pathname.startsWith(item.href);
+            const ativo = pathname.startsWith(item.href) ||
+              (item.href === "/condominios/gerenciar" &&
+                pathname.startsWith("/condominios"));
 
             return (
               <Link

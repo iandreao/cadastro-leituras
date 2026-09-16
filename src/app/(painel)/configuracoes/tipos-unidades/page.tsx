@@ -1,5 +1,5 @@
-import TiposUnidadeScreen from "./TiposUnidadeScreen";
+import { redirect } from "next/navigation";
 
 export default function TiposUnidadesPage() {
-  return <TiposUnidadeScreen />;
+  redirect("/condominios/gerenciar?aba=tipos-unidade");
 }
