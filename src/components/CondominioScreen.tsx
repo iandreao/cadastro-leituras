@@ -21,6 +21,7 @@ import {
   tipoDocumentoDe,
   toTitleCase,
 } from "@/lib/masks";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
 type TipoDocumento = "cpf" | "cnpj";
 
@@ -329,11 +330,11 @@ export default function CondominioScreen({
         <form
           key={formKey}
           autoComplete="off"
-          className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`}
+          className={`mt-4 space-y-3 ${AREA_ROLAVEL} pr-1`}
           onSubmit={onSubmit}
         >
           <fieldset disabled={Boolean(editandoId)}>
-            <legend className="mb-1.5 block text-lg font-medium text-slate-700">
+            <legend className={ROTULO_CAMPO}>
               Tipo de Pessoa
             </legend>
             <div className="grid grid-cols-2 gap-2">
@@ -349,7 +350,7 @@ export default function CondominioScreen({
                 return (
                   <label
                     key={opcao.valor}
-                    className={`flex items-center justify-center rounded-lg border px-3 py-2.5 text-center text-base font-medium transition ${
+                    className={`flex items-center justify-center rounded-lg border px-3 py-1.5 text-center text-sm font-medium transition ${
                       bloqueado
                         ? "cursor-not-allowed opacity-50"
                         : "cursor-pointer"
@@ -379,7 +380,7 @@ export default function CondominioScreen({
 
           {podeEscolherGestor ? (
             <label className="block">
-              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Gestor / Cliente
               </span>
               <select
@@ -392,7 +393,7 @@ export default function CondominioScreen({
                     gestorId: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                className={CAMPO}
               >
                 <option value="">Selecione o gestor</option>
                 {gestores.map((gestor) => (
@@ -464,7 +465,7 @@ export default function CondominioScreen({
             placeholder="(00) 00000-0000"
           />
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Chave Pix do Condomínio
             </span>
             <input
@@ -481,7 +482,7 @@ export default function CondominioScreen({
                   chavePix: event.target.value,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              className={CAMPO}
             />
           </label>
 
@@ -629,7 +630,7 @@ function Campo({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-lg font-medium text-slate-700">
+      <span className={ROTULO_CAMPO}>
         {label}
       </span>
       <input
@@ -643,10 +644,10 @@ function Campo({
         maxLength={maxLength}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border px-3 py-2.5 text-lg outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${
+        className={`${CAMPO} ${
           invalido
             ? "border-red-500 focus:border-red-600 focus:ring-red-600/20"
-            : "border-slate-300 focus:border-teal-600 focus:ring-teal-600/20"
+            : ""
         }`}
       />
     </label>

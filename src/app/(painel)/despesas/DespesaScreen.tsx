@@ -14,6 +14,7 @@ import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
 import { MESES, anosReferencia, nomeMes } from "@/lib/leituras";
 import { usePublicarCompetencia } from "@/lib/competencia-selecionada";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
 type Condominio = {
   id: string;
@@ -53,8 +54,7 @@ type DespesaMensal = {
   };
 };
 
-const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 const MENSAGEM_MES_FECHADO =
   "O movimento deste mês está fechado. Reabra o movimento na tela de Apuração para alterar lançamentos.";
@@ -429,11 +429,11 @@ export default function DespesaScreen({
         </p>
 
         <form
-          className="mt-6 space-y-4 overflow-visible pr-1"
+          className="mt-4 space-y-3 overflow-visible pr-1"
           onSubmit={onSubmit}
         >
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Condomínio
             </span>
             <select
@@ -452,7 +452,7 @@ export default function DespesaScreen({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Bloco/Torre
             </span>
             <select
@@ -485,7 +485,7 @@ export default function DespesaScreen({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Mês
               </span>
               <select
@@ -506,7 +506,7 @@ export default function DespesaScreen({
               </select>
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Ano
               </span>
               <select
@@ -529,7 +529,7 @@ export default function DespesaScreen({
           </div>
 
           <label className="relative z-20 block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Tipo de despesa
             </span>
             <select
@@ -548,7 +548,7 @@ export default function DespesaScreen({
           </label>
 
           <fieldset>
-            <legend className="mb-1.5 block text-lg font-medium text-slate-700">
+            <legend className={ROTULO_CAMPO}>
               Forma de Rateio
             </legend>
             <div className="space-y-2 rounded-xl border border-slate-200 p-3">
@@ -576,7 +576,7 @@ export default function DespesaScreen({
           {aguaPorConsumo ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Valor Fixo (R$)
                 </span>
                 <input
@@ -591,7 +591,7 @@ export default function DespesaScreen({
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Valor Variável (R$)
                 </span>
                 <input
@@ -608,7 +608,7 @@ export default function DespesaScreen({
             </div>
           ) : (
             <label className="block">
-              <span className="mb-1.5 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Valor total
               </span>
               <input

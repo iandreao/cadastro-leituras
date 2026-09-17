@@ -16,6 +16,7 @@ import {
   onlyDigits,
   toTitleCase,
 } from "@/lib/masks";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import AcessoRestrito from "@/components/AcessoRestrito";
 import { GestoresEsqueleto } from "./gestores-esqueleto";
 import {
@@ -380,12 +381,12 @@ export default function GestoresPage() {
         <h2 className="mb-4 shrink-0 text-2xl font-medium text-slate-900">
           {editando ? "Alterar gestor" : "Incluir gestor"}
         </h2>
-        <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-4 pr-1`}>
+        <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-3 pr-1`}>
           {editando ? <input type="hidden" name="id" value={form.id} /> : null}
           <input type="hidden" name="tipoPessoa" value={form.tipoPessoa} />
 
           <fieldset>
-            <legend className="mb-1.5 text-lg font-medium text-slate-700">
+            <legend className={ROTULO_CAMPO}>
               Tipo de pessoa
             </legend>
             <div className="flex gap-2">
@@ -400,7 +401,7 @@ export default function GestoresPage() {
                 return (
                   <label
                     key={opcao.valor}
-                    className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-center text-base font-medium ${
+                    className={`flex-1 cursor-pointer rounded-lg border px-3 py-1.5 text-center text-sm font-medium ${
                       ativo
                         ? "border-teal-700 bg-teal-700 text-white"
                         : `border-slate-300 bg-white text-slate-700 ${
@@ -425,7 +426,7 @@ export default function GestoresPage() {
           </fieldset>
 
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               {ehCpf ? "CPF" : "CNPJ"}
             </span>
             <input
@@ -449,7 +450,7 @@ export default function GestoresPage() {
                   void consultarCnpj(event.target.value);
                 }
               }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+              className={`${CAMPO} font-mono tabular-nums`}
             />
             {ehCpf && erroCpf ? (
               <p className="mt-1.5 text-lg text-red-700">{erroCpf}</p>
@@ -462,7 +463,7 @@ export default function GestoresPage() {
           ) : null}
 
           <label className="block">
-            <span className="mb-1 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               {ehCpf ? "Nome" : "Nome / Razão social"}
             </span>
             <input
@@ -477,13 +478,13 @@ export default function GestoresPage() {
                   nome: event.target.value,
                 }))
               }
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20 disabled:bg-slate-100"
+              className={`${CAMPO} disabled:bg-slate-100`}
             />
           </label>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <label className="block md:col-span-3">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Logradouro
               </span>
               <input
@@ -496,11 +497,11 @@ export default function GestoresPage() {
                     logradouro: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={CAMPO}
               />
             </label>
             <label className="block md:col-span-1">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Número
               </span>
               <input
@@ -510,14 +511,14 @@ export default function GestoresPage() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, numero: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={`${CAMPO} font-mono tabular-nums`}
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Complemento
               </span>
               <input
@@ -530,11 +531,11 @@ export default function GestoresPage() {
                     complemento: event.target.value,
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={CAMPO}
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Bairro
               </span>
               <input
@@ -544,14 +545,14 @@ export default function GestoresPage() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, bairro: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={CAMPO}
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <label className="block md:col-span-2">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Cidade
               </span>
               <input
@@ -561,11 +562,11 @@ export default function GestoresPage() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, cidade: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={CAMPO}
               />
             </label>
             <label className="block md:col-span-1">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 UF
               </span>
               <input
@@ -579,11 +580,11 @@ export default function GestoresPage() {
                     estado: event.target.value.toUpperCase().slice(0, 2),
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={`${CAMPO} font-mono tabular-nums`}
               />
             </label>
             <label className="block md:col-span-2">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 CEP
               </span>
               <input
@@ -599,7 +600,7 @@ export default function GestoresPage() {
                   }))
                 }
                 onBlur={(event) => void consultarCep(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={`${CAMPO} font-mono tabular-nums`}
               />
             </label>
           </div>
@@ -609,7 +610,7 @@ export default function GestoresPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 E-mail
               </span>
               <input
@@ -621,11 +622,11 @@ export default function GestoresPage() {
                 onChange={(event) =>
                   setForm((atual) => ({ ...atual, email: event.target.value }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={`${CAMPO} font-mono`}
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-lg font-medium text-slate-700">
+              <span className={ROTULO_CAMPO}>
                 Celular
               </span>
               <input
@@ -640,7 +641,7 @@ export default function GestoresPage() {
                     celular: maskCelular(event.target.value),
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-lg tabular-nums outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+                className={`${CAMPO} font-mono tabular-nums`}
               />
             </label>
           </div>

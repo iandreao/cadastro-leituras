@@ -7,6 +7,7 @@ import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { periodoBrasil } from "@/lib/periodo";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 import { toTitleCase } from "@/lib/masks";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import {
   anosReferencia,
   consumoGasInconsistente,
@@ -54,17 +55,16 @@ type Linha = {
   anterior: number;
 };
 
-const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 const inputTabela =
-  "w-full rounded-md border border-slate-300 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
+  "h-9 w-full rounded-md border border-slate-300 px-2 py-1 text-right font-mono text-sm font-normal tabular-nums text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20";
 
 const inputErro =
-  "w-full rounded-md border border-red-600 bg-red-50 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-red-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20";
+  "h-9 w-full rounded-md border border-red-600 bg-red-50 px-2 py-1 text-right font-mono text-sm font-normal tabular-nums text-red-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20";
 
 const inputBloqueado =
-  "w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-2 text-right font-mono text-lg font-normal tabular-nums text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
+  "h-9 w-full cursor-not-allowed rounded-md border border-slate-400 bg-slate-300 px-2 py-1 text-right font-mono text-sm font-normal tabular-nums text-slate-600 pointer-events-none dark:bg-slate-700 dark:text-slate-300";
 
 const agoraBrasil = periodoBrasil();
 const anos = anosReferencia(agoraBrasil.ano);
@@ -472,8 +472,8 @@ export default function LeituraGradeScreen({
       onSubmit={onSubmit}
       className={
         embutido
-          ? "mx-auto h-full min-h-0 max-w-6xl overflow-auto rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm"
-          : "mx-auto h-auto min-h-fit max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 pb-8 shadow-sm"
+          ? "mx-auto h-full min-h-0 max-w-6xl overflow-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          : "mx-auto h-auto min-h-fit max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
       }
     >
       <h2 className="text-3xl font-medium text-slate-900">{titulo}</h2>
@@ -482,9 +482,9 @@ export default function LeituraGradeScreen({
         para preenchimento em lote.
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
         <label className="block lg:col-span-1">
-          <span className="mb-1.5 block text-lg font-medium text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Condomínio
           </span>
           <select
@@ -502,7 +502,7 @@ export default function LeituraGradeScreen({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-lg font-medium text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Mês
           </span>
           <select
@@ -519,7 +519,7 @@ export default function LeituraGradeScreen({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-lg font-medium text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Ano
           </span>
           <select

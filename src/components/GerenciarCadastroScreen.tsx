@@ -8,6 +8,7 @@ import CondominioScreen from "@/components/CondominioScreen";
 import UnidadeScreen from "@/components/UnidadeScreen";
 import type { RoleSessao } from "@/lib/auth";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
+import { ABA_LISTA, classeAba } from "@/lib/ui-form";
 
 const ABAS = [
   { id: "condominios", label: "Condomínios" },
@@ -66,7 +67,7 @@ export default function GerenciarCadastroScreen({
       <div
         role="tablist"
         aria-label="Cadastro do condomínio"
-        className="flex shrink-0 flex-wrap gap-1 rounded-xl bg-slate-100 p-1"
+        className={ABA_LISTA}
       >
         {ABAS.map((item) => {
           const ativo = aba === item.id;
@@ -78,11 +79,7 @@ export default function GerenciarCadastroScreen({
               role="tab"
               aria-selected={ativo}
               onClick={() => irPara(item.id)}
-              className={`rounded-lg px-4 py-2.5 text-base font-bold transition ${
-                ativo
-                  ? "bg-white text-teal-800 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              className={classeAba(ativo)}
             >
               {item.label}
             </button>

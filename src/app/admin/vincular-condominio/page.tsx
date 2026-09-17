@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import { AuthFeedback } from "@/components/AuthFeedback";
 import AcessoRestrito from "@/components/AcessoRestrito";
 import { toTitleCase } from "@/lib/masks";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import {
   carregarPainelVinculo,
   type CondominioVinculavel,
@@ -15,8 +16,6 @@ import { VincularCondominioEsqueleto } from "./vincular-esqueleto";
 const CARTAO =
   "flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6";
 
-const CAMPO =
-  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-sans outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
 function rotuloCondominioSelect(condominio: CondominioVinculavel) {
   const gestor = condominio.gestorNome
@@ -128,7 +127,7 @@ export default function VincularCondominioPage() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Condomínio
             </span>
             <select
@@ -151,7 +150,7 @@ export default function VincularCondominioPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Novo gestor / cliente
             </span>
             <select

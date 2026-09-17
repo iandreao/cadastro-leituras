@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import LeituraGradeScreen from "@/components/LeituraGradeScreen";
 import { useCompetenciaSelecionada } from "@/lib/competencia-selecionada";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
+import { ABA_LISTA, classeAba } from "@/lib/ui-form";
 
 const ABAS = [
   { id: "agua", label: "Leitura de Água" },
@@ -47,7 +48,7 @@ export default function GerenciarLeiturasScreen() {
       <div
         role="tablist"
         aria-label="Leituras do condomínio"
-        className="flex shrink-0 flex-wrap gap-1 rounded-xl bg-slate-100 p-1"
+        className={ABA_LISTA}
       >
         {ABAS.map((item) => {
           const ativo = aba === item.id;
@@ -59,11 +60,7 @@ export default function GerenciarLeiturasScreen() {
               role="tab"
               aria-selected={ativo}
               onClick={() => irPara(item.id)}
-              className={`rounded-lg px-4 py-2.5 text-base font-bold transition ${
-                ativo
-                  ? "bg-white text-teal-800 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              className={classeAba(ativo)}
             >
               {item.label}
             </button>

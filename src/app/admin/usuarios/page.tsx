@@ -8,6 +8,7 @@ import {
   GRADE_CADASTRO,
 } from "@/lib/layout-cadastro";
 import { toTitleCase } from "@/lib/masks";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import AcessoRestrito from "@/components/AcessoRestrito";
 import {
   excluirUsuario,
@@ -19,9 +20,6 @@ import {
   type UsuarioLista,
 } from "./actions";
 
-const CAMPO =
-  "h-10 w-full rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
-const ROTULO = "mb-1 block text-xs font-semibold text-slate-700";
 const BOTAO_PRIMARIO =
   "inline-flex h-10 items-center justify-center rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70";
 const BOTAO_SECUNDARIO =
@@ -180,7 +178,7 @@ export default function UsuariosPage() {
         <form onSubmit={onSubmit} className={`${AREA_ROLAVEL} space-y-3 pr-1`}>
           <input type="hidden" name="id" value={form.id} />
           <label className="block">
-            <span className={ROTULO}>Nome</span>
+            <span className={ROTULO_CAMPO}>Nome</span>
             <input
               name="nome"
               value={form.nome}
@@ -194,7 +192,7 @@ export default function UsuariosPage() {
             />
           </label>
           <label className="block">
-            <span className={ROTULO}>E-mail</span>
+            <span className={ROTULO_CAMPO}>E-mail</span>
             <input
               name="email"
               type="email"
@@ -209,7 +207,7 @@ export default function UsuariosPage() {
           </label>
           {editando ? (
             <label className="block">
-              <span className={ROTULO}>Senha (opcional)</span>
+              <span className={ROTULO_CAMPO}>Senha (opcional)</span>
               <input
                 name="senha"
                 type="password"
@@ -230,7 +228,7 @@ export default function UsuariosPage() {
             </p>
           )}
           <label className="block">
-            <span className={ROTULO}>Perfil</span>
+            <span className={ROTULO_CAMPO}>Perfil</span>
             <select
               name="role"
               value={form.role}
@@ -247,7 +245,7 @@ export default function UsuariosPage() {
             </select>
           </label>
           <label className="block">
-            <span className={ROTULO}>Status</span>
+            <span className={ROTULO_CAMPO}>Status</span>
             <select
               name="ativo"
               value={form.ativo ? "true" : "false"}
@@ -265,7 +263,7 @@ export default function UsuariosPage() {
           </label>
           {ehSuperAdmin ? (
             <label className="block">
-              <span className={ROTULO}>Cliente Gestor</span>
+              <span className={ROTULO_CAMPO}>Cliente Gestor</span>
               <select
                 name="gestorId"
                 required

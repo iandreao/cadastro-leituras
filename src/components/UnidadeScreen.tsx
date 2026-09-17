@@ -10,6 +10,7 @@ import {
   GRADE_CADASTRO,
   GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import { maskCelular, toTitleCase } from "@/lib/masks";
 import {
   exclusaoUnidadeBloqueada,
@@ -60,8 +61,7 @@ type Unidade = {
 
 type ModoCadastro = "individual" | "lote";
 
-const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 export default function UnidadeScreen({
   condominiosIniciais,
@@ -392,11 +392,11 @@ export default function UnidadeScreen({
         </p>
 
         <form
-          className={`mt-6 grid grid-cols-1 gap-4 ${AREA_ROLAVEL} pr-1 md:grid-cols-2`}
+          className={`mt-4 grid grid-cols-1 gap-3 ${AREA_ROLAVEL} pr-1 md:grid-cols-2`}
           onSubmit={onSubmit}
         >
           <label className="block md:col-span-2">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Condomínio
             </span>
             <select
@@ -422,7 +422,7 @@ export default function UnidadeScreen({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Bloco/Torre
             </span>
             <select
@@ -453,7 +453,7 @@ export default function UnidadeScreen({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Tipo de Unidade
             </span>
             <select
@@ -477,7 +477,7 @@ export default function UnidadeScreen({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Tipo de Consumo
             </span>
             <select
@@ -498,14 +498,14 @@ export default function UnidadeScreen({
 
           {!editandoId && (
             <fieldset>
-              <legend className="mb-1.5 block text-lg font-medium text-slate-700">
+              <legend className={ROTULO_CAMPO}>
                 Modo de cadastro
               </legend>
               <div className="grid grid-cols-1 gap-2 rounded-xl bg-slate-100 p-1 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setModo("individual")}
-                  className={`rounded-lg px-3 py-2.5 text-lg font-medium transition ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                     modoAtual === "individual"
                       ? "bg-white text-teal-800 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
@@ -516,7 +516,7 @@ export default function UnidadeScreen({
                 <button
                   type="button"
                   onClick={() => setModo("lote")}
-                  className={`rounded-lg px-3 py-2.5 text-lg font-medium transition ${
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                     modoAtual === "lote"
                       ? "bg-white text-teal-800 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
@@ -531,7 +531,7 @@ export default function UnidadeScreen({
           {modoAtual === "lote" ? (
             <div className="grid grid-cols-1 gap-4 md:col-span-2 sm:grid-cols-3">
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Unidade Inicial
                 </span>
                 <input
@@ -546,7 +546,7 @@ export default function UnidadeScreen({
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Unidades por Andar
                 </span>
                 <input
@@ -561,7 +561,7 @@ export default function UnidadeScreen({
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Quantidade de Andares
                 </span>
                 <input
@@ -586,7 +586,7 @@ export default function UnidadeScreen({
           ) : (
             <>
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Nº da unidade
                 </span>
                 <input
@@ -599,7 +599,7 @@ export default function UnidadeScreen({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Nome do Morador
                 </span>
                 <input
@@ -612,7 +612,7 @@ export default function UnidadeScreen({
               </label>
 
               <label className="block md:col-span-2">
-                <span className="mb-1.5 block text-lg font-medium text-slate-700">
+                <span className={ROTULO_CAMPO}>
                   Celular
                 </span>
                 <input

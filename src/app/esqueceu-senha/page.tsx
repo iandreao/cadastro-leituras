@@ -4,9 +4,9 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { AuthFeedback } from "@/components/AuthFeedback";
 import AuthLayout from "@/components/AuthLayout";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
-const campoClass =
-  "h-12 w-full rounded-lg border border-slate-300 p-4 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 export default function EsqueceuSenhaScreen() {
   const [email, setEmail] = useState("");
@@ -56,9 +56,9 @@ export default function EsqueceuSenhaScreen() {
         Informe o e-mail da conta para receber o link de recuperação.
       </p>
 
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <label className="block">
-          <span className="mb-1 block text-base font-medium text-slate-700">
+          <span className={ROTULO_CAMPO}>
             E-mail
           </span>
           <input

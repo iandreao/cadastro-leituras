@@ -10,6 +10,7 @@ import {
   GRADE_CADASTRO,
   GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
 type Condominio = {
   id: string;
@@ -28,8 +29,7 @@ type Bloco = {
   };
 };
 
-const campoClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 export default function BlocosScreen({
   condominios: condominiosIniciais = [],
@@ -192,9 +192,9 @@ export default function BlocosScreen({
           Aplica).
         </p>
 
-        <form className={`mt-6 space-y-4 ${AREA_ROLAVEL} pr-1`} onSubmit={onSubmit}>
+        <form className={`mt-4 space-y-3 ${AREA_ROLAVEL} pr-1`} onSubmit={onSubmit}>
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Condomínio
             </span>
             <select
@@ -213,7 +213,7 @@ export default function BlocosScreen({
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-lg font-medium text-slate-700">
+            <span className={ROTULO_CAMPO}>
               Nome do bloco/torre
             </span>
             <input

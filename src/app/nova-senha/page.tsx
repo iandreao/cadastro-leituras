@@ -4,9 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthFeedback } from "@/components/AuthFeedback";
 import AuthLayout from "@/components/AuthLayout";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
-const campoClass =
-  "h-10 w-full rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = CAMPO;
 
 export default function NovaSenhaPage() {
   const router = useRouter();
@@ -67,9 +67,9 @@ export default function NovaSenhaPage() {
         Este é o primeiro acesso. Troque a senha inicial para continuar.
       </p>
 
-      <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Nova senha
           </span>
           <input
@@ -85,7 +85,7 @@ export default function NovaSenhaPage() {
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Confirme a nova senha
           </span>
           <input

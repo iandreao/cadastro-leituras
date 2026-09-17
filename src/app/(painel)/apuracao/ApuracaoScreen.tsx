@@ -14,6 +14,7 @@ import { periodoBrasil } from "@/lib/periodo";
 import { toTitleCase } from "@/lib/masks";
 import { usePublicarCondominio } from "@/lib/condominio-selecionado";
 import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
 function formatarNumeroMoeda(valor: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -147,10 +148,9 @@ function lerResposta(data: RespostaApuracao | FaturaUnidade[]) {
   };
 }
 
-const campoClass =
-  "block h-10 w-full min-w-0 rounded-lg border border-slate-300 px-3 font-sans text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
+const campoClass = `${CAMPO} block min-w-0`;
 
-const rotuloFiltro = "mb-1 block text-xs font-semibold text-slate-700";
+const rotuloFiltro = ROTULO_CAMPO;
 
 const agoraBrasil = periodoBrasil();
 

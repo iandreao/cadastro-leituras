@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { AREA_ROLAVEL, CARTAO_LISTA } from "@/lib/layout-cadastro";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import AcessoRestrito from "@/components/AcessoRestrito";
 import {
   listarGestoresOpcoes,
@@ -112,7 +113,7 @@ export default function MovimentosPage() {
 
       {ehSuperAdmin ? (
         <label className="mb-4 block max-w-md">
-          <span className="mb-1 block text-lg font-medium text-slate-700">
+          <span className={ROTULO_CAMPO}>
             Gestor / Cliente
           </span>
           <select
@@ -122,7 +123,7 @@ export default function MovimentosPage() {
               setGestorId(valor);
               void carregar(valor);
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20"
+            className={CAMPO}
           >
             <option value="">Selecione o gestor</option>
             {gestores.map((gestor) => (

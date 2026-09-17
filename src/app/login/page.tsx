@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthFeedback } from "@/components/AuthFeedback";
+import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
 type Modo = "login" | "cadastro";
 
@@ -14,10 +15,8 @@ const camposIniciais = {
   confirmarSenha: "",
 };
 
-const campoClass =
-  "h-12 w-full rounded-lg border border-slate-300 p-4 text-lg outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
-
-const rotuloClass = "mb-1 block text-base font-medium text-slate-700";
+const campoClass = CAMPO;
+const rotuloClass = ROTULO_CAMPO;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -145,7 +144,7 @@ export default function LoginPage() {
                 : "Preencha os dados para criar o primeiro acesso."}
             </p>
 
-            <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+            <form className="mt-4 space-y-3" onSubmit={onSubmit}>
               {modo === "cadastro" && (
                 <label className="block">
                   <span className={rotuloClass}>Nome</span>
