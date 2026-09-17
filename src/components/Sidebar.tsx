@@ -22,12 +22,12 @@ const itens: { href: string; label: string; roles?: string[] }[] = [
   },
   {
     href: "/admin/gestores",
-    label: "Clientes Gestores",
+    label: "Incluir Cliente Gestor",
     roles: ["SUPER_ADMIN"],
   },
   {
     href: "/admin/vincular-condominio",
-    label: "Gerenciar Condomínios",
+    label: "Trocar Gestor do Condomínio",
     roles: ["SUPER_ADMIN"],
   },
 ];
@@ -58,56 +58,51 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-full shrink-0 flex-col justify-between bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-white/10 px-4 py-3">
-          <p className="text-sm font-medium tracking-[0.2em] text-teal-200 uppercase">
-            GESTÃO DE CONDOMÍNIO
-          </p>
-          <p className="mt-1.5 truncate text-sm text-teal-100/80">
-            {nomeCondominio}
-          </p>
-          {nome ? (
-            <div className="mt-3 rounded-lg bg-white/10 px-3 py-2">
-              <p className="truncate text-sm font-medium text-white" title={nome}>
-                {nome}
-              </p>
-              <span
-                className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${classeTagRole(role)}`}
-              >
-                {rotuloRole(role)}
-              </span>
-            </div>
-          ) : null}
-        </div>
-
-        <nav className="flex min-h-0 flex-1 flex-col space-y-1 overflow-y-auto px-3 py-2">
-          {itens
-            .filter((item) => !item.roles || item.roles.includes(role))
-            .map((item) => {
-            const ativo =
-              pathname.startsWith(item.href) ||
-              (item.href.endsWith("/gerenciar") &&
-                pathname.startsWith(item.href.slice(0, -"/gerenciar".length)));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-lg px-3 py-2 text-base font-semibold transition ${
-                  ativo
-                    ? "bg-white/15 text-white"
-                    : "text-teal-50/80 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+    <aside className="flex h-full w-full shrink-0 flex-col bg-[#0b3b4a] text-white lg:h-screen lg:w-72">
+      <div className="border-b border-white/10 px-4 py-3">
+        <p className="text-sm font-medium tracking-[0.2em] text-teal-200 uppercase">
+          GESTÃO DE CONDOMÍNIO
+        </p>
+        <p className="mt-1.5 truncate text-sm text-teal-100/80">
+          {nomeCondominio}
+        </p>
+        {nome ? (
+          <div className="mt-3 rounded-lg bg-white/10 px-3 py-2">
+            <p className="truncate text-sm font-medium text-white" title={nome}>
+              {nome}
+            </p>
+            <span
+              className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${classeTagRole(role)}`}
+            >
+              {rotuloRole(role)}
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      <div className="shrink-0 px-3 py-2">
+      <nav className="flex flex-col space-y-1 overflow-y-auto px-3 py-2">
+        {itens
+          .filter((item) => !item.roles || item.roles.includes(role))
+          .map((item) => {
+          const ativo =
+            pathname.startsWith(item.href) ||
+            (item.href.endsWith("/gerenciar") &&
+              pathname.startsWith(item.href.slice(0, -"/gerenciar".length)));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`rounded-lg px-3 py-2 text-base font-semibold transition ${
+                ativo
+                  ? "bg-white/15 text-white"
+                  : "text-teal-50/80 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
         <button
           type="button"
           onClick={sair}
@@ -115,7 +110,7 @@ export default function Sidebar({
         >
           Sair
         </button>
-      </div>
+      </nav>
     </aside>
   );
 }
