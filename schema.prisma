@@ -76,6 +76,7 @@ model Condominio {
   celular         String
   chavePix        String?
   gestorId        String?
+  versao          Int             @default(1)
   gestor          Gestor?         @relation(fields: [gestorId], references: [id], onDelete: Restrict)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

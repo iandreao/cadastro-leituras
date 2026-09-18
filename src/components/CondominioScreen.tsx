@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { listarGestores } from "@/app/admin/gestores/actions";
+import { AuthFeedback } from "@/components/AuthFeedback";
 import type { RoleSessao } from "@/lib/auth";
 import {
   AREA_ROLAVEL,
@@ -26,6 +27,9 @@ import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 const CAMPO_AMPLIADO =
   `${CAMPO} !h-10 !min-h-10 !py-2 !text-base !font-medium !leading-6 placeholder:!text-base placeholder:!font-normal`;
 
+const MENSAGEM_CONFLITO_VERSAO =
+  "Aviso: Este condomínio foi atualizado por outro usuário recentemente. Por favor, recarregue a página antes de salvar para não perder informações.";
+
 type TipoDocumento = "cpf" | "cnpj";
 
 type Condominio = {
@@ -36,6 +40,7 @@ type Condominio = {
   email: string;
   celular: string;
   chavePix?: string | null;
+  versao?: number;
   temLeitura?: boolean;
   gestorId?: string | null;
   gestor?: { id: string; nome: string } | null;
@@ -55,6 +60,7 @@ function formularioVazio(gestorIdSessao = "") {
     celular: "",
     chavePix: "",
     gestorId: gestorIdSessao,
+    versao: 1,
   };
 }
 
@@ -237,6 +243,7 @@ export default function CondominioScreen({
       celular: maskCelular(item.celular),
       chavePix: item.chavePix ?? "",
       gestorId: item.gestorId ?? gestorPadrao,
+      versao: item.versao ?? 1,
     });
     setEditandoId(item.id);
     setUltimoCnpjConsultado(tipo === "cnpj" ? onlyDigits(item.cnpj) : "");
@@ -296,7 +303,7 @@ export default function CondominioScreen({
         ? `/api/condominios/${editandoId}`
         : "/api/condominios";
       const response = await fetch(url, {
-        method: editandoId ? "PUT" : "POST",
+        method: editandoId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cnpj: form.cnpj,
@@ -306,13 +313,18 @@ export default function CondominioScreen({
           celular: form.celular,
           chavePix: form.chavePix.trim(),
           tipoDocumento,
+          ...(editandoId ? { versao: form.versao } : {}),
           ...(podeEscolherGestor ? { gestorId: form.gestorId } : {}),
         }),
       });
       const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setErro(data.error ?? "Não foi possível salvar.");
+        setErro(
+          data.error === "CONFLITO_VERSAO"
+            ? MENSAGEM_CONFLITO_VERSAO
+            : (data.error ?? "Não foi possível salvar."),
+        );
         return;
       }
 
@@ -494,11 +506,17 @@ export default function CondominioScreen({
               {info}
             </p>
           )}
-          {erro && (
+          {erro === MENSAGEM_CONFLITO_VERSAO ? (
+            <AuthFeedback
+              tipo="erro"
+              titulo="Aviso"
+              mensagem="Este condomínio foi atualizado por outro usuário recentemente. Por favor, recarregue a página antes de salvar para não perder informações."
+            />
+          ) : erro ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-lg text-red-700">
               {erro}
             </p>
-          )}
+          ) : null}
 
           <div className="flex gap-3">
             <button

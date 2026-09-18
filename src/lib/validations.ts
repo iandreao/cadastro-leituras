@@ -63,6 +63,7 @@ export const condominioSchema = z
       .trim()
       .max(120, "A chave Pix deve ter no máximo 120 caracteres.")
       .optional(),
+    versao: z.coerce.number().int().optional(),
   })
   .strip()
   .superRefine((data, ctx) => {

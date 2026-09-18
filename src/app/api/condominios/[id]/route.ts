@@ -50,8 +50,14 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const condominio = await prisma.condominio.update({
-      where: { id },
+    const versaoCliente = parsed.data.versao;
+
+    if (versaoCliente !== atual.versao) {
+      return NextResponse.json({ error: "CONFLITO_VERSAO" }, { status: 409 });
+    }
+
+    const atualizados = await prisma.condominio.updateMany({
+      where: { id, versao: atual.versao },
       data: {
         cnpj,
         nome: toTitleCase(parsed.data.nome),
@@ -59,7 +65,16 @@ export async function PUT(request: Request, context: RouteContext) {
         email: parsed.data.email.toLowerCase(),
         celular: onlyDigits(parsed.data.celular),
         chavePix,
+        versao: atual.versao + 1,
       },
+    });
+
+    if (atualizados.count === 0) {
+      return NextResponse.json({ error: "CONFLITO_VERSAO" }, { status: 409 });
+    }
+
+    const condominio = await prisma.condominio.findFirstOrThrow({
+      where: { id, ...escopoTenant(session) },
     });
 
     invalidarCacheCadastro();
@@ -71,6 +86,8 @@ export async function PUT(request: Request, context: RouteContext) {
     );
   }
 }
+
+export const PATCH = PUT;
 
 export async function DELETE(request: Request, context: RouteContext) {
   const { session, error } = await requireApiSession(request);
