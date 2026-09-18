@@ -412,7 +412,7 @@ export default function TiposDespesaScreen({
           <p className="text-lg text-slate-500">Nenhum tipo cadastrado.</p>
         ) : (
           <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
-            <table className="w-full border-collapse text-base">
+            <table className="w-full border-collapse text-sm leading-6">
               <thead className="sticky top-0 bg-slate-50">
                 <tr>
                   <th className="border border-gray-300 px-3 py-1 text-center font-medium text-slate-700">

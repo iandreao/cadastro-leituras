@@ -679,7 +679,7 @@ export default function DespesaScreen({
           </p>
         ) : (
           <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
-            <table className="w-full border-collapse text-base">
+            <table className="w-full border-collapse text-sm leading-6">
               <thead className="sticky top-0 bg-slate-50">
                 <tr>
                   <th className="min-w-[12rem] border border-gray-300 px-3 py-1 text-left font-medium text-slate-700">
