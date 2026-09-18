@@ -6,22 +6,13 @@ import { useRouter } from "next/navigation";
 import { AuthFeedback } from "@/components/AuthFeedback";
 import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 
-type Modo = "login" | "cadastro";
-
-const camposIniciais = {
-  nome: "",
-  email: "",
-  senha: "",
-  confirmarSenha: "",
-};
-
 const campoClass = CAMPO;
 const rotuloClass = ROTULO_CAMPO;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [modo, setModo] = useState<Modo>("login");
-  const [form, setForm] = useState(camposIniciais);
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -31,21 +22,10 @@ export default function LoginPage() {
     setEnviando(true);
 
     try {
-      const url = modo === "login" ? "/api/auth/login" : "/api/auth/cadastro";
-      const payload =
-        modo === "login"
-          ? { email: form.email, senha: form.senha }
-          : {
-              nome: form.nome,
-              email: form.email,
-              senha: form.senha,
-              confirmarSenha: form.confirmarSenha,
-            };
-
-      const response = await fetch(url, {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ email, senha }),
       });
 
       const data = (await response.json()) as {
@@ -68,7 +48,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden font-sans">
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
         <section className="relative hidden overflow-hidden bg-[#0b3b4a] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-400/20" />
@@ -104,71 +84,21 @@ export default function LoginPage() {
               </h1>
             </div>
 
-            <div className="mb-6 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setModo("login");
-                  setErro("");
-                }}
-                className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
-                  modo === "login"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                Entrar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModo("cadastro");
-                  setErro("");
-                }}
-                className={`rounded-lg px-3 py-2.5 text-base font-medium transition ${
-                  modo === "cadastro"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                Criar conta
-              </button>
-            </div>
-
             <h2 className="text-3xl font-bold text-slate-900">
-              {modo === "login" ? "Acesse o sistema" : "Cadastre-se"}
+              Acesse o sistema
             </h2>
             <p className="mt-2 text-lg text-slate-500">
-              {modo === "login"
-                ? "Use o e-mail e a senha da sua conta."
-                : "Preencha os dados para criar o primeiro acesso."}
+              Use o e-mail e a senha da sua conta.
             </p>
 
             <form className="mt-4 space-y-3" onSubmit={onSubmit}>
-              {modo === "cadastro" && (
-                <label className="block">
-                  <span className={rotuloClass}>Nome</span>
-                  <input
-                    required
-                    value={form.nome}
-                    onChange={(event) =>
-                      setForm((atual) => ({ ...atual, nome: event.target.value }))
-                    }
-                    className={campoClass}
-                    placeholder="Seu nome"
-                  />
-                </label>
-              )}
-
               <label className="block">
                 <span className={rotuloClass}>E-mail</span>
                 <input
                   required
                   type="email"
-                  value={form.email}
-                  onChange={(event) =>
-                    setForm((atual) => ({ ...atual, email: event.target.value }))
-                  }
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   className={campoClass}
                   placeholder="voce@email.com"
                 />
@@ -179,44 +109,19 @@ export default function LoginPage() {
                 <input
                   required
                   type="password"
-                  minLength={modo === "cadastro" ? 6 : undefined}
-                  value={form.senha}
-                  onChange={(event) =>
-                    setForm((atual) => ({ ...atual, senha: event.target.value }))
-                  }
+                  value={senha}
+                  onChange={(event) => setSenha(event.target.value)}
                   className={campoClass}
                   placeholder="••••••••"
                 />
               </label>
 
-              {modo === "login" && (
-                <Link
-                  href="/esqueceu-senha"
-                  className="mb-2 block text-right text-base font-medium text-teal-700 hover:underline"
-                >
-                  Esqueceu a senha?
-                </Link>
-              )}
-
-              {modo === "cadastro" && (
-                <label className="block">
-                  <span className={rotuloClass}>Confirmar senha</span>
-                  <input
-                    required
-                    type="password"
-                    minLength={6}
-                    value={form.confirmarSenha}
-                    onChange={(event) =>
-                      setForm((atual) => ({
-                        ...atual,
-                        confirmarSenha: event.target.value,
-                      }))
-                    }
-                    className={campoClass}
-                    placeholder="••••••••"
-                  />
-                </label>
-              )}
+              <Link
+                href="/esqueceu-senha"
+                className="mb-2 block text-right text-base font-medium text-teal-700 hover:underline"
+              >
+                Esqueceu a senha?
+              </Link>
 
               {erro ? (
                 <AuthFeedback
@@ -231,11 +136,7 @@ export default function LoginPage() {
                 disabled={enviando}
                 className="w-full rounded-lg bg-teal-700 px-4 py-3 text-lg font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {enviando
-                  ? "Aguarde..."
-                  : modo === "login"
-                    ? "Entrar"
-                    : "Criar conta"}
+                {enviando ? "Aguarde..." : "Entrar"}
               </button>
             </form>
           </div>
