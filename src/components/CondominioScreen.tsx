@@ -554,20 +554,17 @@ export default function CondominioScreen({
         {lista.length === 0 ? (
           <p className="text-lg text-slate-500">Nenhum condomínio incluído.</p>
         ) : (
-          <div className={`${AREA_ROLAVEL} rounded-md border border-gray-300`}>
-            <table className="w-full border-collapse text-base leading-6">
+          <div className={`${AREA_ROLAVEL} overflow-x-hidden rounded-md border border-gray-300`}>
+            <table className="w-full table-fixed border-collapse text-base leading-6">
               <thead className="sticky top-0 bg-slate-50">
                 <tr>
-                  <th className="border border-gray-300 px-3 py-2 text-left text-base font-semibold text-slate-700">
+                  <th className="w-[46%] border border-gray-300 px-3 py-2 text-left text-base font-semibold text-slate-700">
                     Nome
                   </th>
-                  <th className="border border-gray-300 px-3 py-2 text-left text-base font-semibold whitespace-nowrap text-slate-700">
+                  <th className="w-[28%] border border-gray-300 px-3 py-2 text-left text-base font-semibold whitespace-nowrap text-slate-700">
                     CPF/CNPJ
                   </th>
-                  <th className="min-w-[16rem] border border-gray-300 px-3 py-2 text-left text-base font-semibold text-slate-700">
-                    Endereço
-                  </th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-base font-semibold whitespace-nowrap text-slate-700">
+                  <th className="w-[26%] border border-gray-300 px-3 py-2 text-center text-base font-semibold whitespace-nowrap text-slate-700">
                     Ação
                   </th>
                 </tr>
@@ -580,14 +577,11 @@ export default function CondominioScreen({
                       editandoId === item.id ? "bg-teal-50/70" : "bg-white"
                     }
                   >
-                    <td className="border border-gray-300 px-3 py-2 text-base font-medium whitespace-nowrap text-slate-900">
+                    <td className="truncate border border-gray-300 px-3 py-2 text-base font-medium text-slate-900" title={toTitleCase(item.nome)}>
                       {toTitleCase(item.nome)}
                     </td>
-                    <td className="border border-gray-300 px-3 py-2 font-mono text-base font-normal whitespace-nowrap tabular-nums text-slate-700">
+                    <td className="truncate border border-gray-300 px-3 py-2 font-mono text-base font-normal tabular-nums text-slate-700">
                       {maskCpfOuCnpj(item.cnpj)}
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 text-base text-slate-700">
-                      {toTitleCase(item.endereco)}
                     </td>
                     <td className="border border-gray-300 p-0 align-middle">
                       <div className="flex items-center justify-center gap-2 py-1.5">
