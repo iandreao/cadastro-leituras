@@ -326,11 +326,11 @@ export default function UsuariosPage() {
         {lista.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhum usuário incluído.</p>
         ) : (
-          <div className={`${AREA_ROLAVEL} overflow-x-hidden rounded-md border border-gray-300`}>
+          <div className={`${AREA_ROLAVEL} min-w-0 overflow-x-hidden rounded-md border border-gray-300`}>
             <table className="w-full table-fixed border-collapse font-sans text-sm">
               <thead className="sticky top-0 bg-slate-50">
                 <tr>
-                  <th className="w-1/3 max-w-[200px] border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
+                  <th className="w-1/3 min-w-0 border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
                     Nome
                   </th>
                   <th className="border border-gray-300 px-3 py-1 text-left text-xs font-semibold text-slate-700">
@@ -357,7 +357,10 @@ export default function UsuariosPage() {
                       form.id === item.id ? "bg-teal-50/70" : "bg-white"
                     }
                   >
-                    <td className="max-w-[200px] w-1/3 truncate border border-gray-300 px-3 py-1 font-medium text-slate-900" title={toTitleCase(item.nome)}>
+                    <td
+                      className="w-1/3 min-w-0 truncate border border-gray-300 px-3 py-1 font-medium text-slate-900"
+                      title={toTitleCase(item.nome)}
+                    >
                       {toTitleCase(item.nome)}
                     </td>
                     <td className="border border-gray-300 px-3 py-1 text-slate-700">
