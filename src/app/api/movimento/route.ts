@@ -4,8 +4,6 @@ import { processarApuracao } from "@/lib/apuracao";
 import {
   definirMovimentoFechado,
   listarPeriodosFechados,
-  movimentoEstaFechado,
-  type PeriodoFechado,
 } from "@/lib/movimento";
 import { apuracaoSchema, movimentoSchema } from "@/lib/validations";
 import { buscarCondominioDoTenant } from "@/lib/multi-tenant";
@@ -72,7 +70,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const fechados = await listarPeriodosFechados(condominioId, session);
+    const fechados = await listarPeriodosFechados(
+      condominioId,
+      session,
+      condominio.gestorId,
+    );
     const mes = searchParams.get("mes");
     const ano = searchParams.get("ano");
 
@@ -88,17 +90,10 @@ export async function GET(request: Request) {
 
       return NextResponse.json(
         {
-          fechado:
-            (await movimentoEstaFechado(
-              parsed.data.condominioId,
-              parsed.data.mes,
-              parsed.data.ano,
-              session,
-            )) ||
-            fechados.some(
-              (item: PeriodoFechado) =>
-                item.mes === parsed.data.mes && item.ano === parsed.data.ano,
-            ),
+          fechado: fechados.some(
+            (item) =>
+              item.mes === parsed.data.mes && item.ano === parsed.data.ano,
+          ),
           fechados,
         },
         { headers: cabecalhosCors(request) },

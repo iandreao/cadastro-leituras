@@ -22,7 +22,9 @@ function aplicarParamsPooler(params: URLSearchParams) {
   params.set("sslmode", "require");
   params.set("pgbouncer", "true");
   params.set("connect_timeout", "15");
-  params.set("connection_limit", "1");
+  // O processo atende várias queries ao mesmo tempo (apuração, grade de leitura).
+  // Com limite 1 elas entram numa fila e cada uma espera o tempo de ida ao Neon.
+  params.set("connection_limit", "10");
   params.set("pool_timeout", "10");
   params.delete("channel_binding");
 }

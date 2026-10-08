@@ -8,26 +8,61 @@ export type CondominioResumo = {
   chavePix?: string | null;
 };
 
+const TTL_RESUMO_MS = 20_000;
+
+type CacheResumo = {
+  dados: CondominioResumo[];
+  expira: number;
+};
+
+let cacheResumo: CacheResumo | null = null;
+let pedidoEmVoo: Promise<CondominioResumo[] | null> | null = null;
+
+export function invalidarResumoCondominios() {
+  cacheResumo = null;
+}
+
+async function buscarResumo() {
+  if (cacheResumo && cacheResumo.expira > Date.now()) {
+    return cacheResumo.dados;
+  }
+
+  if (!pedidoEmVoo) {
+    pedidoEmVoo = fetch("/api/condominios?resumo=1")
+      .then(async (response) => {
+        const data = (await response.json()) as
+          | CondominioResumo[]
+          | { error?: string };
+
+        if (!response.ok || !Array.isArray(data)) {
+          return null;
+        }
+
+        cacheResumo = { dados: data, expira: Date.now() + TTL_RESUMO_MS };
+        return data;
+      })
+      .catch(() => null)
+      .finally(() => {
+        pedidoEmVoo = null;
+      });
+  }
+
+  return pedidoEmVoo;
+}
+
 export function useCondominiosResumo(iniciais: CondominioResumo[] = []) {
-  const [condominios, setCondominios] = useState<CondominioResumo[]>(iniciais);
+  const [condominios, setCondominios] = useState<CondominioResumo[]>(
+    cacheResumo && cacheResumo.expira > Date.now() ? cacheResumo.dados : iniciais,
+  );
 
   useEffect(() => {
     let ativo = true;
 
-    async function carregar() {
-      try {
-        const response = await fetch("/api/condominios?resumo=1");
-        const data = (await response.json()) as CondominioResumo[] | { error?: string };
-
-        if (ativo && response.ok && Array.isArray(data)) {
-          setCondominios(data);
-        }
-      } catch {
-        // A tela já está visível; o seletor fica vazio se a API falhar.
+    void buscarResumo().then((dados) => {
+      if (ativo && dados) {
+        setCondominios(dados);
       }
-    }
-
-    void carregar();
+    });
 
     return () => {
       ativo = false;

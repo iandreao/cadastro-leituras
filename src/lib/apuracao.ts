@@ -239,6 +239,29 @@ function indexarLeiturasPorPeriodo(
   return { atual, previa };
 }
 
+function agruparPorUnidade<T extends { unidadeId: string }>(linhas: T[]) {
+  const mapa = new Map<string, T[]>();
+
+  for (const linha of linhas) {
+    const atual = mapa.get(linha.unidadeId);
+
+    if (atual) {
+      atual.push(linha);
+    } else {
+      mapa.set(linha.unidadeId, [linha]);
+    }
+  }
+
+  return mapa;
+}
+
+function semUnidadeId<T extends { unidadeId: string }>({
+  unidadeId: _unidadeId,
+  ...resto
+}: T) {
+  return resto;
+}
+
 async function carregarPacoteApuracao(
   condominioId: string,
   mes: number,
@@ -246,107 +269,147 @@ async function carregarPacoteApuracao(
   session?: SessionUser | null,
 ) {
   const { fim } = limitesCompetencia(mes, ano);
+  const filtroLeitura = filtroLeiturasCompetencia(mes, ano);
 
-  const condominio = await prisma.condominio.findFirst({
-    where: { id: condominioId, ...escopoTenant(session) },
-    select: { id: true },
-  });
+  const [condominio, despesasMensais, tiposDespesa, unidadesBase] =
+    await Promise.all([
+      prisma.condominio.findFirst({
+        where: { id: condominioId, ...escopoTenant(session) },
+        select: { id: true },
+      }),
+      prisma.despesaMensal.findMany({
+        where: { condominioId, mes, ano },
+        orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+        select: {
+          blocoId: true,
+          valorTotal: true,
+          valorFixo: true,
+          valorVariavel: true,
+          formaCobranca: true,
+          tipoDespesaId: true,
+          tipoDespesa: {
+            select: { id: true, nome: true },
+          },
+          bloco: {
+            select: { nome: true },
+          },
+        },
+      }),
+      prisma.tipoDespesa.findMany({
+        where: { condominioId },
+        select: {
+          regras: {
+            select: {
+              tipoUnidadeId: true,
+              tipoDespesaId: true,
+            },
+          },
+        },
+      }),
+      prisma.unidade.findMany({
+        where: { condominioId },
+        orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
+        select: {
+          id: true,
+          numero: true,
+          blocoId: true,
+          tipoUnidadeId: true,
+          nomeMorador: true,
+          celular: true,
+          tipoUnidade: {
+            select: { id: true, nome: true },
+          },
+          bloco: {
+            select: { id: true, nome: true },
+          },
+        },
+      }),
+    ]);
 
   if (!condominio) {
     return null;
   }
 
-  const [despesasMensais, tiposDespesa, unidades] = await Promise.all([
-    prisma.despesaMensal.findMany({
-      where: { condominioId, mes, ano },
-      orderBy: [{ bloco: { nome: "asc" } }, { tipoDespesa: { nome: "asc" } }],
+  const unidadeIds = unidadesBase.map((unidade) => unidade.id);
+
+  if (unidadeIds.length === 0) {
+    return {
+      id: condominio.id,
+      despesasMensais,
+      tiposDespesa,
+      unidades: unidadesBase.map((unidade) => ({
+        ...unidade,
+        leituras: [],
+        historicoMoradores: [],
+        faturas: [],
+      })),
+    };
+  }
+
+  const [leituras, historicos, faturas] = await Promise.all([
+    prisma.leitura.findMany({
+      where: {
+        unidadeId: { in: unidadeIds },
+        ...filtroLeitura,
+      },
       select: {
-        blocoId: true,
-        valorTotal: true,
-        valorFixo: true,
-        valorVariavel: true,
-        formaCobranca: true,
-        tipoDespesaId: true,
-        tipoDespesa: {
-          select: { id: true, nome: true },
-        },
-        bloco: {
-          select: { nome: true },
-        },
+        unidadeId: true,
+        mes: true,
+        ano: true,
+        valorAgua: true,
+        valorGas: true,
       },
     }),
-    prisma.tipoDespesa.findMany({
-      where: { condominioId },
-      select: {
-        regras: {
-          select: {
-            tipoUnidadeId: true,
-            tipoDespesaId: true,
-          },
-        },
+    prisma.historicoMorador.findMany({
+      where: {
+        unidadeId: { in: unidadeIds },
+        dataEntrada: { lte: fim },
       },
-    }),
-    prisma.unidade.findMany({
-      where: { condominioId },
-      relationLoadStrategy: "query",
-      orderBy: [{ bloco: { nome: "asc" } }, { numero: "asc" }],
+      orderBy: { dataEntrada: "asc" },
       select: {
-        id: true,
-        numero: true,
-        blocoId: true,
-        tipoUnidadeId: true,
+        unidadeId: true,
         nomeMorador: true,
         celular: true,
-        tipoUnidade: {
-          select: { id: true, nome: true },
-        },
-        bloco: {
-          select: { id: true, nome: true },
-        },
-        leituras: {
-          where: filtroLeiturasCompetencia(mes, ano),
-          select: {
-            mes: true,
-            ano: true,
-            valorAgua: true,
-            valorGas: true,
-          },
-        },
-        historicoMoradores: {
-          where: { dataEntrada: { lte: fim } },
-          orderBy: { dataEntrada: "asc" },
-          select: {
-            nomeMorador: true,
-            celular: true,
-            email: true,
-            dataEntrada: true,
-            dataSaida: true,
-          },
-        },
-        faturas: {
-          where: { mes, ano },
-          take: 1,
-          select: {
-            id: true,
-            unidadeId: true,
-            mes: true,
-            ano: true,
-            valorAgua: true,
-            valorEnergia: true,
-            valorGas: true,
-            valorOutras: true,
-            valorTotal: true,
-          },
-        },
+        email: true,
+        dataEntrada: true,
+        dataSaida: true,
+      },
+    }),
+    prisma.faturaUnidade.findMany({
+      where: {
+        unidadeId: { in: unidadeIds },
+        mes,
+        ano,
+      },
+      select: {
+        id: true,
+        unidadeId: true,
+        mes: true,
+        ano: true,
+        valorAgua: true,
+        valorEnergia: true,
+        valorGas: true,
+        valorOutras: true,
+        valorTotal: true,
       },
     }),
   ]);
+  const leiturasPorUnidade = agruparPorUnidade(leituras);
+  const historicoPorUnidade = agruparPorUnidade(historicos);
+  const faturaPorUnidade = agruparPorUnidade(faturas);
 
   return {
     id: condominio.id,
     despesasMensais,
     tiposDespesa,
-    unidades,
+    unidades: unidadesBase.map((unidade) => ({
+      ...unidade,
+      leituras: (leiturasPorUnidade.get(unidade.id) ?? []).map(semUnidadeId),
+      historicoMoradores: (historicoPorUnidade.get(unidade.id) ?? []).map(
+        semUnidadeId,
+      ),
+      faturas: (faturaPorUnidade.get(unidade.id) ?? []).slice(0, 1),
+    })),
   };
 }
 

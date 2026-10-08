@@ -252,15 +252,18 @@ export default function DespesaScreen({
       return;
     }
 
-    const resBlocos = await fetch(`/api/blocos?condominioId=${id}`);
+    setTipos([]);
+    setTipoDespesaId("");
+
+    const [resBlocos] = await Promise.all([
+      fetch(`/api/blocos?condominioId=${id}`),
+      carregar(id, undefined),
+    ]);
     const listaBlocos = (await resBlocos.json()) as BlocoCadastro[] | { error?: string };
     setBlocos((atual) => {
       const demais = atual.filter((item) => item.condominioId !== id);
       return [...demais, ...(Array.isArray(listaBlocos) ? listaBlocos : [])];
     });
-    setTipos([]);
-    setTipoDespesaId("");
-    await carregar(id, undefined);
   }
 
   useEffect(() => {

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { invalidarCacheCadastro } from "@/lib/cache-cadastro";
+import {
+  invalidarCacheCadastro,
+  listarCondominiosResumo,
+} from "@/lib/cache-cadastro";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/auth";
 import { garantirBlocoPadrao } from "@/lib/blocos-db";
@@ -24,11 +27,7 @@ export async function GET(request: Request) {
   const where = escopoTenant(session);
 
   if (resumo) {
-    const condominios = await prisma.condominio.findMany({
-      where,
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true, chavePix: true },
-    });
+    const condominios = await listarCondominiosResumo(session);
     return NextResponse.json(condominios);
   }
 

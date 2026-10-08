@@ -12,6 +12,7 @@ import {
   GRADE_CADASTRO_EMBUTIDA,
 } from "@/lib/layout-cadastro";
 import { useCondominioSelecionado } from "@/lib/condominio-selecionado";
+import { invalidarResumoCondominios } from "@/lib/use-condominios-resumo";
 import {
   maskCelular,
   maskCnpj,
@@ -277,6 +278,7 @@ export default function CondominioScreen({
       return;
     }
 
+    invalidarResumoCondominios();
     limparFormulario();
     await carregar();
   }
@@ -328,6 +330,7 @@ export default function CondominioScreen({
         return;
       }
 
+      invalidarResumoCondominios();
       limparFormulario();
       await carregar();
     } catch {

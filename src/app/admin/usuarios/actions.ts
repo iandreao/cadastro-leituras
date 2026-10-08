@@ -2,6 +2,7 @@
 
 import { Prisma, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { invalidarStatusSessao } from "@/lib/exigir-sessao-painel";
 import { getSession } from "@/lib/session";
 import { toTitleCase } from "@/lib/masks";
 import { getPrisma } from "@/lib/prisma";
@@ -228,6 +229,7 @@ export async function salvarUsuario(
             : {}),
         },
       });
+      invalidarStatusSessao(existente.id);
     } else {
       await getPrisma().usuario.create({
         data: {
@@ -282,6 +284,7 @@ export async function excluirUsuario(id: string): Promise<ResultadoUsuario> {
   try {
     await apagarTokensPorEmail(usuario.email);
     await getPrisma().usuario.delete({ where: { id: usuario.id } });
+    invalidarStatusSessao(usuario.id);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

@@ -12,6 +12,7 @@ import {
 } from "@/lib/layout-cadastro";
 import { CAMPO, ROTULO_CAMPO } from "@/lib/ui-form";
 import { maskCelular, toTitleCase } from "@/lib/masks";
+import { useCondominiosResumo } from "@/lib/use-condominios-resumo";
 import {
   exclusaoUnidadeBloqueada,
   gerarNumerosUnidades,
@@ -76,7 +77,7 @@ export default function UnidadeScreen({
   condominioIdInicial?: string;
   embutido?: boolean;
 }) {
-  const [condominios, setCondominios] = useState<Condominio[]>(condominiosIniciais);
+  const condominios = useCondominiosResumo(condominiosIniciais);
   const [unidades, setUnidades] = useState<Unidade[]>(unidadesIniciais);
   const [tipos, setTipos] = useState<TipoUnidadeCadastro[]>(tiposIniciais);
   const [blocos, setBlocos] = useState<BlocoCadastro[]>([]);
@@ -142,21 +143,10 @@ export default function UnidadeScreen({
   }
 
   useEffect(() => {
-    void carregarCondominios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     void carregarUnidades(condominioId);
     void carregarBlocos(condominioId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [condominioId]);
-
-  async function carregarCondominios() {
-    const resCondominios = await fetch("/api/condominios?resumo=1");
-    const listaCondominios = (await resCondominios.json()) as Condominio[];
-    setCondominios(Array.isArray(listaCondominios) ? listaCondominios : []);
-  }
 
   async function carregarUnidades(id: string) {
     if (!id) {
@@ -171,13 +161,10 @@ export default function UnidadeScreen({
 
   async function carregar() {
     await Promise.all([
-      carregarCondominios(),
       carregarUnidades(condominioId),
+      carregarTipos(condominioId, undefined, blocoId),
+      condominioId ? carregarBlocos(condominioId) : Promise.resolve(),
     ]);
-    await carregarTipos(condominioId, undefined, blocoId);
-    if (condominioId) {
-      await carregarBlocos(condominioId);
-    }
   }
 
   const unidadesVisiveis = useMemo(() => {

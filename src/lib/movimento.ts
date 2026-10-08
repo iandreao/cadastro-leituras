@@ -18,7 +18,22 @@ export type PeriodoFechado = {
 async function resolverGestorIdDaCompetencia(
   session: SessionUser | null | undefined,
   condominioId: string,
+  gestorIdInformado?: string | null,
 ) {
+  const informado = gestorIdInformado?.trim();
+
+  if (informado) {
+    return informado;
+  }
+
+  if (session && !ehSuperAdmin(session)) {
+    const doToken = session.gestorId?.trim();
+
+    if (doToken) {
+      return doToken;
+    }
+  }
+
   const condominio = await getPrisma().condominio.findFirst({
     where: {
       id: condominioId,
@@ -69,9 +84,14 @@ export async function verificarCompetenciaAberta(
 export async function listarPeriodosFechados(
   condominioId: string,
   session?: SessionUser | null,
+  gestorIdInformado?: string | null,
 ): Promise<PeriodoFechado[]> {
   try {
-    const gestorId = await resolverGestorIdDaCompetencia(session, condominioId);
+    const gestorId = await resolverGestorIdDaCompetencia(
+      session,
+      condominioId,
+      gestorIdInformado,
+    );
 
     if (!gestorId) {
       return [];
